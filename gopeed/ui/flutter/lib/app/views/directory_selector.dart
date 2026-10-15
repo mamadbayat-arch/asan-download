@@ -237,7 +237,7 @@ class _DirectorySelectorState extends State<DirectorySelector> {
               // Show rendered path as a chip/badge in the input field
               suffix = Container(
                 padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                margin: const EdgeInsets.only(right: 8),
+                margin: const EdgeInsetsDirectional.only(end: 8),
                 decoration: BoxDecoration(
                   color: Colors.blue[50],
                   borderRadius: BorderRadius.circular(4),
@@ -269,6 +269,8 @@ class _DirectorySelectorState extends State<DirectorySelector> {
               readOnly:
                   widget.allowEdit ? false : (Util.isWeb() ? false : true),
               controller: widget.controller,
+              textDirection: TextDirection.ltr,
+              textAlign: Directionality.of(context) == TextDirection.rtl ? TextAlign.right : TextAlign.left,
               decoration: widget.showLabel
                   ? InputDecoration(
                       labelText: 'downloadDir'.tr,

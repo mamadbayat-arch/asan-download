@@ -138,7 +138,7 @@ class SettingView extends GetView<SettingController> {
           : 'off'.tr;
     }, (Key key) {
       return Container(
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         child: Switch(
           value:
               appController.downloaderConfig.value.extra.defaultDirectDownload,
@@ -158,7 +158,7 @@ class SettingView extends GetView<SettingController> {
           : 'off'.tr;
     }, (Key key) {
       return Container(
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         child: Switch(
           value: appController.downloaderConfig.value.extra.autoStartTasks,
           onChanged: (bool value) async {
@@ -178,7 +178,7 @@ class SettingView extends GetView<SettingController> {
           : 'off'.tr;
     }, (Key key) {
       return Container(
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         child: Switch(
           value: appController.downloaderConfig.value.autoTorrent.enable,
           onChanged: (bool value) async {
@@ -200,7 +200,7 @@ class SettingView extends GetView<SettingController> {
           : 'off'.tr;
     }, (Key key) {
       return Container(
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         child: Switch(
           value: appController
               .downloaderConfig.value.autoTorrent.deleteAfterDownload,
@@ -222,7 +222,7 @@ class SettingView extends GetView<SettingController> {
           : 'off'.tr;
     }, (Key key) {
       return Container(
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         child: Switch(
           value:
               appController.downloaderConfig.value.autoDeleteMissingFileTasks,
@@ -243,7 +243,7 @@ class SettingView extends GetView<SettingController> {
           : 'off'.tr;
     }, (Key key) {
       return Container(
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         child: Switch(
           value: appController.downloaderConfig.value.archive.autoExtract,
           onChanged: (bool value) async {
@@ -263,7 +263,7 @@ class SettingView extends GetView<SettingController> {
           : 'off'.tr;
     }, (Key key) {
       return Container(
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         child: Switch(
           value:
               appController.downloaderConfig.value.archive.deleteAfterExtract,
@@ -438,7 +438,7 @@ class SettingView extends GetView<SettingController> {
             return appController.autoStartup.value ? 'on'.tr : 'off'.tr;
           }, (Key key) {
             return Container(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Switch(
                 value: appController.autoStartup.value,
                 onChanged: (bool value) async {
@@ -465,7 +465,7 @@ class SettingView extends GetView<SettingController> {
             return Database.instance.getRunAsMenubarApp() ? 'on'.tr : 'off'.tr;
           }, (Key key) {
             return Container(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -507,7 +507,7 @@ class SettingView extends GetView<SettingController> {
                 : 'off'.tr;
           }, (Key key) {
             return Container(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Switch(
                 value: appController
                     .downloaderConfig.value.extra.desktopNotification,
@@ -569,7 +569,7 @@ class SettingView extends GetView<SettingController> {
         'useServerCtime', () => httpConfig.useServerCtime ? 'on'.tr : 'off'.tr,
         (Key key) {
       return Container(
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         child: Switch(
           value: httpConfig.useServerCtime,
           onChanged: (bool value) {
@@ -765,7 +765,7 @@ class SettingView extends GetView<SettingController> {
                 : 'off'.tr;
           }, (Key key) {
             return Container(
-              alignment: Alignment.centerLeft,
+              alignment: AlignmentDirectional.centerStart,
               child: Switch(
                 value:
                     appController.downloaderConfig.value.extra.defaultBtClient,
@@ -1003,7 +1003,7 @@ class SettingView extends GetView<SettingController> {
             downloaderCfg.value.extra.notifyWhenNewVersion ? 'on'.tr : 'off'.tr,
         (Key key) {
       return Container(
-        alignment: Alignment.centerLeft,
+        alignment: AlignmentDirectional.centerStart,
         child: Switch(
           value: downloaderCfg.value.extra.notifyWhenNewVersion,
           onChanged: (bool value) async {
@@ -1148,7 +1148,7 @@ class SettingView extends GetView<SettingController> {
               ),
             ),
           ),
-          const Padding(padding: EdgeInsets.only(left: 10)),
+          const Padding(padding: EdgeInsetsDirectional.only(start: 10)),
           Flexible(
             child: TextFormField(
               controller: portController,
@@ -1191,7 +1191,7 @@ class SettingView extends GetView<SettingController> {
               ),
             ),
           ),
-          const Padding(padding: EdgeInsets.only(left: 10)),
+          const Padding(padding: EdgeInsetsDirectional.only(start: 10)),
           Flexible(
             child: TextFormField(
               controller: pwdController,
@@ -1457,7 +1457,7 @@ class SettingView extends GetView<SettingController> {
                 ],
               ),
             ),
-            const Padding(padding: EdgeInsets.only(left: 10)),
+            const Padding(padding: EdgeInsetsDirectional.only(start: 10)),
             Flexible(
               child: TextFormField(
                 controller: portController,

@@ -204,6 +204,8 @@ class CreateView extends GetView<CreateController> {
                         child: TextFormField(
                           autofocus: !Util.isMobile(),
                           controller: _urlController,
+                          textDirection: TextDirection.ltr,
+                          textAlign: Directionality.of(context) == TextDirection.rtl ? TextAlign.right : TextAlign.left,
                           minLines: 1,
                           maxLines: 5,
                           decoration: InputDecoration(
@@ -322,7 +324,7 @@ class CreateView extends GetView<CreateController> {
                       ),
                     ]),
                     Padding(
-                      padding: const EdgeInsets.only(left: 40),
+                      padding: const EdgeInsetsDirectional.only(start: 40),
                       child: Column(children: [
                         TextField(
                           controller: _renameController,
@@ -449,8 +451,7 @@ class CreateView extends GetView<CreateController> {
                                                 ),
                                               ),
                                               const Padding(
-                                                  padding: EdgeInsets.only(
-                                                      left: 10)),
+                                                  padding: EdgeInsetsDirectional.only(start: 10)),
                                               Flexible(
                                                 child: TextFormField(
                                                   controller:
@@ -486,8 +487,7 @@ class CreateView extends GetView<CreateController> {
                                                 ),
                                               ),
                                               const Padding(
-                                                  padding: EdgeInsets.only(
-                                                      left: 10)),
+                                                  padding: EdgeInsetsDirectional.only(start: 10)),
                                               Flexible(
                                                 child: TextFormField(
                                                   controller:
@@ -538,8 +538,7 @@ class CreateView extends GetView<CreateController> {
                                                   ),
                                                 ),
                                                 const Padding(
-                                                    padding: EdgeInsets.only(
-                                                        left: 10)),
+                                                    padding: EdgeInsetsDirectional.only(start: 10)),
                                                 Flexible(
                                                   child: TextFormField(
                                                     controller: e.value,
@@ -550,8 +549,7 @@ class CreateView extends GetView<CreateController> {
                                                   ),
                                                 ),
                                                 const Padding(
-                                                    padding: EdgeInsets.only(
-                                                        left: 10)),
+                                                    padding: EdgeInsetsDirectional.only(start: 10)),
                                                 IconButton(
                                                   icon: const Icon(Icons.add),
                                                   onPressed: () {
