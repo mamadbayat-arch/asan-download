@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 $taskSource=[IO.Path]::GetFullPath($PSScriptRoot)
 if(!(Test-Path -LiteralPath (Join-Path $taskSource 'AsanDownload.exe'))){throw 'Extract the Windows bundle before running Install.cmd.'}
 $taskTarget=[IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Programs/AsanDownloadNext'))

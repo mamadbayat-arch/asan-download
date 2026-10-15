@@ -11,7 +11,7 @@ class LegacyRecord {
  final Map<String,dynamic> data;
  String get path=>data['Path'] as String? ?? '';
  String get name=>p.basename(path);
- String get key=>data['Id'] as String? ?? '$path|${data['Finished']}';
+ String get key=>'${path.toLowerCase()}|${finished?.toUtc().millisecondsSinceEpoch ?? data['Finished']}';
  DateTime? get finished {
   final value=data['Finished']?.toString()??'';
   final epoch=RegExp(r'/Date\((-?\d+)').firstMatch(value);

@@ -1,4 +1,4 @@
-$ErrorActionPreference='Stop'
+﻿$ErrorActionPreference='Stop'
 $taskTarget=[IO.Path]::GetFullPath($PSScriptRoot)
 $taskAllowed=[IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Programs/AsanDownloadNext'))
 if($taskTarget -ne $taskAllowed){throw 'Invalid uninstall directory'}

@@ -631,6 +631,11 @@ class AppController extends GetxController with WindowListener, TrayListener {
       if (!await marker.exists()) {
         final legacy=await readLegacyFolder(path.join(Platform.environment['LOCALAPPDATA']??'','MehrDownload'));
         if(legacy!=null) config.downloadDir=legacy;
+        config.archive.autoExtract=false;
+        config.archive.deleteAfterExtract=false;
+        config.autoDeleteMissingFileTasks=false;
+        extra.autoStartTasks=false;
+        extra.defaultBtClient=false;
         await putConfig(config);
         await marker.parent.create(recursive:true);
         await marker.writeAsString('1',flush:true);

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:args/args.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -134,7 +135,7 @@ Future<void> init(StartupArgs args) async {
   () async {
     if (Util.isDesktop()) {
       try {
-        registerUrlScheme("asan-download");
+        if (Platform.environment["ASAN_TEST_MODE"] != "1") registerUrlScheme("asan-download");
         if (controller.downloaderConfig.value.extra.defaultBtClient) {
           registerDefaultTorrentClient();
         }
@@ -147,7 +148,7 @@ Future<void> init(StartupArgs args) async {
       } catch (e) {
         logger.e("browser extension host binary install fail", e);
       }
-      for (final browser in Browser.values) {
+      for (final browser in (Platform.environment["ASAN_TEST_MODE"] == "1" ? <Browser>[] : Browser.values)) {
         try {
           await installManifest(browser);
         } catch (e) {

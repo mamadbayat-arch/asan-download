@@ -13,3 +13,5 @@ Modifications by MehrNoor, October 2026: Asan branding, Persian defaults and the
 Application source: `gopeed/` in the `codex/gopeed-based` branch of https://github.com/mamadbayat-arch/asan-download . The corresponding source archive is included with build artifacts. Dependencies retain their respective licenses.
 
 The original C# application in the repository root is a separate application and is not silently replaced by this preview.
+
+Default download safety: downloaded archives are kept as files; automatic extraction and deletion are disabled on the initial migration. A later explicit user preference can change these settings. Browser startup and history import never create download tasks.

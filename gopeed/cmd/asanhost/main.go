@@ -28,7 +28,7 @@ func ensureApp() error {
  self,err:=os.Executable();if err!=nil{return err};exe:=filepath.Join(filepath.Dir(self),"AsanDownload.exe")
  if data,err:=os.ReadFile(filepath.Join(filepath.Dir(self),"asan-app-path.txt"));err==nil{exe=strings.TrimSpace(string(data))}
  if filepath.Ext(exe)!=".exe"{return fmt.Errorf("invalid app path")};if _,err=os.Stat(exe);err!=nil{return err}
- cmd:=exec.Command(exe,"--hidden");if err=cmd.Start();err!=nil{return err};go cmd.Wait()
+ cmd:=exec.Command(exe,"--hidden");cmd.Dir=filepath.Dir(exe);if err=cmd.Start();err!=nil{return err};go cmd.Wait()
  for n:=0;n<30;n++{time.Sleep(500*time.Millisecond);if c,e:=dial();e==nil{c.Close();return nil}}
  return fmt.Errorf("app unavailable")
 }
