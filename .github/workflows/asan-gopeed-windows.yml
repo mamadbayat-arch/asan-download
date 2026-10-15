@@ -1,0 +1,39 @@
+name: Asan Download Gopeed Windows
+on:
+  push:
+    branches: [codex/gopeed-based]
+    paths: ['gopeed/**', 'BuildGopeed.ps1', '.github/workflows/asan-gopeed-windows.yml']
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: asan-gopeed-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  windows:
+    runs-on: windows-2022
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.11'
+          cache-dependency-path: gopeed/go.sum
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.2'
+          channel: stable
+          cache: true
+      - name: Browser startup regression
+        run: node gopeed/browser-extension/test-background.mjs
+      - name: Build and test Asan Download
+        shell: pwsh
+        run: ./BuildGopeed.ps1
+      - name: Corresponding GPL source
+        shell: pwsh
+        run: git archive --format=zip --output=GopeedRelease/AsanDownload-Gopeed-2.0.0-Source.zip HEAD gopeed BuildGopeed.ps1 GOPEED-FORK.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: AsanDownload-Gopeed-Windows
+          path: GopeedRelease/*.zip
+          retention-days: 14

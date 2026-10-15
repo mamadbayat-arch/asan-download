@@ -52,3 +52,16 @@
 
 # Generated site preview/build copies.
 /server/public/release.json
+
+# Gopeed-based next generation sources and their dedicated build.
+!/gopeed/
+!/.github/
+!/GOPEED-FORK.md
+!/BuildGopeed.ps1
+/gopeed/**/build/
+/gopeed/**/.dart_tool/
+/gopeed/**/storage/
+
+!/gopeed/pkg/download/testdata/extensions/storage/
+!/gopeed/pkg/download/testdata/extensions/storage/**
+!/gopeed/.github/workflows/translator.yml.bak
