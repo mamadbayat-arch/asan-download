@@ -413,19 +413,19 @@ class SettingView extends GetView<SettingController> {
               OpenInNew(
                 text: "Chrome",
                 url:
-                    "https://chromewebstore.google.com/detail/gopeed/mijpgljlfcapndmchhjffkpckknofcnd",
+                    "https://downloader.hamtavar.ir/extension-guide.html",
               ),
               SizedBox(width: 10),
               OpenInNew(
                 text: "Edge",
                 url:
-                    "https://microsoftedge.microsoft.com/addons/detail/dkajnckekendchdleoaenoophcobooce",
+                    "https://downloader.hamtavar.ir/extension-guide.html",
               ),
               SizedBox(width: 10),
               OpenInNew(
                 text: "Firefox",
                 url:
-                    "https://addons.mozilla.org/zh-CN/firefox/addon/gopeed-extension",
+                    "https://downloader.hamtavar.ir/extension-guide.html",
               ),
             ],
           ).paddingOnly(top: 5));

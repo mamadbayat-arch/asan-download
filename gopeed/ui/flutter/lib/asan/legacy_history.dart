@@ -33,6 +33,10 @@ Future<List<LegacyRecord>> readLegacyHistory(String root) async {
  if(await journal.exists()){await for(final file in journal.list()){if(file is File&&file.path.endsWith('.json')){try{add(jsonDecode(await file.readAsString()));}catch(_){}}}}
  final result=records.values.toList();result.sort((a,b)=>(b.finished??DateTime(1900)).compareTo(a.finished??DateTime(1900)));return result;
 }
+Future<String?> readLegacyFolder(String root) async {
+ for(final name in ['session.json','session.json.bak']){try{final data=jsonDecode(await File(p.join(root,name)).readAsString());final folder=data['Folder'];if(folder is String&&folder.isNotEmpty&&await Directory(folder).exists())return folder;}catch(_){}}
+ return null;
+}
 class LegacyHistoryPage extends StatelessWidget {
  const LegacyHistoryPage({super.key});
  Future<List<LegacyRecord>> _load()=>readLegacyHistory(p.join(Platform.environment['LOCALAPPDATA']??'','MehrDownload'));

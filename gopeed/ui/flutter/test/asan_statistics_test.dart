@@ -1,0 +1,2 @@
+import 'package:flutter_test/flutter_test.dart';import 'package:gopeed/asan/task_statistics.dart';
+void main(){test('download duration uses engine nanoseconds and decimal speed units',(){expect(activeDuration(3661000000000),'01:01:01');expect(activeDuration(0),'—');expect(formatDownloadSpeed(1000000,false),'1.00 MB/s');expect(formatDownloadSpeed(1000000,true),'8.00 Mb/s');expect(persianCompletionDate(DateTime(2026,3,21,9,5)),startsWith('1405/01/01'));});}

@@ -1,3 +1,5 @@
+> **نسخهٔ جدید بر پایه Gopeed:** سورس در `gopeed/` و راهنمای ساخت ویندوز در [GOPEED-FORK.md](GOPEED-FORK.md) است. با `BuildGopeed.ps1` ساخته می‌شود. توضیحات زیر مربوط به نسخهٔ قبلی C# هستند.
+
 # آسان دانلود · Asan Download
 
 Persian Windows download manager with a browser extension and a small self-hosted website/admin service.

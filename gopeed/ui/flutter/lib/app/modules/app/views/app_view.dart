@@ -22,7 +22,6 @@ class AppView extends GetView<AppController> {
         useInheritedMediaQuery: true,
         debugShowCheckedModeBanner: false,
         title: 'آسان دانلود',
-        title: 'آسان دانلود',
         theme: GopeedTheme.light,
         darkTheme: GopeedTheme.dark,
         themeMode: ThemeMode.values.byName(config.extra.themeMode),

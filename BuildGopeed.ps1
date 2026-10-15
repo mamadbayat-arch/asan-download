@@ -29,6 +29,7 @@ try {
   }
   foreach($taskDll in @('msvcp140.dll','vcruntime140.dll','vcruntime140_1.dll')){$taskCandidate=Join-Path $env:WINDIR "System32/$taskDll";if(Test-Path -LiteralPath $taskCandidate){Copy-Item -LiteralPath $taskCandidate -Destination $taskBundle -Force}}
   Copy-Item -LiteralPath (Join-Path $taskSource 'LICENSE'),(Join-Path $taskSource 'ASAN-NOTICE.md') -Destination $taskBundle
+  Copy-Item -LiteralPath (Join-Path $taskSource 'packaging/Install.cmd'),(Join-Path $taskSource 'packaging/Install.ps1'),(Join-Path $taskSource 'packaging/Uninstall.ps1') -Destination $taskBundle
   Copy-Item -LiteralPath (Join-Path $taskSource 'browser-extension') -Destination (Join-Path $taskBundle 'BrowserExtension') -Recurse -Force
   $taskOut=Join-Path $taskProject 'GopeedRelease';New-Item -ItemType Directory -Path $taskOut -Force|Out-Null
   Compress-Archive -Path (Join-Path $taskBundle '*') -DestinationPath (Join-Path $taskOut "AsanDownload-Gopeed-$Version-Windows.zip") -Force

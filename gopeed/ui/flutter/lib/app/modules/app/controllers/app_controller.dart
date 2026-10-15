@@ -37,7 +37,8 @@ import '../../../../util/package_info.dart';
 import '../../../../util/updater.dart';
 import '../../../../util/util.dart';
 import '../../../../asan/browser_confirmation.dart';
-import '../../../../api/model/options.dart';
+import '../../../../asan/legacy_history.dart';
+import '../../../../api/model/options.dart' as task_options;
 import '../../../routes/app_pages.dart';
 import '../../../rpc/rpc.dart';
 import '../../redirect/views/redirect_view.dart';
@@ -343,7 +344,7 @@ class AppController extends GetxController with WindowListener, TrayListener {
           _asanPromptActive=true;
           try{await windowManager.show();await windowManager.focus();
             if(!await confirmBrowserDownload(url)){await ctx.writeJSON({'accepted':false,'cancelled':true});return;}
-            await createTask(CreateTask(req:Request(url:url),opts:Options(path:downloaderConfig.value.downloadDir)));
+            await createTask(CreateTask(req:Request(url:url),opts:task_options.Options(path:downloaderConfig.value.downloadDir)));
             await ctx.writeJSON({'accepted':true});
           }catch(_){await ctx.writeJSON({'accepted':false,'reason':'browser_required'});}
           finally{_asanPromptActive=false;}
@@ -622,6 +623,17 @@ class AppController extends GetxController with WindowListener, TrayListener {
         config.downloadDir = (await getApplicationDocumentsDirectory()).path;
       } else {
         config.downloadDir = './';
+      }
+    }
+
+    if (Util.isWindows()) {
+      final marker=File(path.join(Util.getStorageDir(),'legacy-folder-migrated.flag'));
+      if (!await marker.exists()) {
+        final legacy=await readLegacyFolder(path.join(Platform.environment['LOCALAPPDATA']??'','MehrDownload'));
+        if(legacy!=null) config.downloadDir=legacy;
+        await putConfig(config);
+        await marker.parent.create(recursive:true);
+        await marker.writeAsString('1',flush:true);
       }
     }
 

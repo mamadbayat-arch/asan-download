@@ -9,6 +9,7 @@ import '../../api/model/resolve_task.dart';
 import '../../api/model/task.dart';
 import '../../util/message.dart';
 import '../../util/util.dart';
+import '../../asan/task_statistics.dart';
 import '../modules/app/controllers/app_controller.dart';
 import '../modules/task/controllers/task_controller.dart';
 import '../modules/task/controllers/task_downloaded_controller.dart';
@@ -605,15 +606,14 @@ class BuildTaskListView extends GetView {
                               ),
                             ).padding(horizontal: 4),
                           ],
-                          Text("${Util.fmtByte(task.progress.speed)}/s",
-                              style: Get.textTheme.titleSmall),
+                          AsanSpeed(task.progress.speed),
                           ...buildActions()
                         ],
                       ),
                     ],
                   ),
                   isDone()
-                      ? Container()
+                      ? TaskStatistics(task)
                       : LinearProgressIndicator(
                           value: getProgress(),
                         ),
