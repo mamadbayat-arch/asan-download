@@ -81,17 +81,18 @@ void main() {
         expect(text.textAlign ?? TextAlign.start, TextAlign.start);
         if(width>=768) {
           final labels = ['دانلودها','افزونه‌ها','تنظیمات'];
-          final edges = labels.map((label)=>tester.getRect(find.text(label)).right).toList();
+          final edges = labels.map((label)=>tester.getRect(find.descendant(
+            of:find.byType(AsanSidebar),matching:find.text(label))).right).toList();
           expect(edges.every((value)=>(value-edges.first).abs()<1),isTrue);
         }
-        if(Platform.environment['ASAN_UI_SHOTS']=='1') {
+        if(Platform.environment['ASAN_UI_SHOTS']=='1') await tester.runAsync(() async {
           final render=boundary.currentContext!.findRenderObject()! as RenderRepaintBoundary;
           final image=await render.toImage(pixelRatio:1);
           final bytes=await image.toByteData(format:ui.ImageByteFormat.png);
           final output=File('build/asan-ui/extensions-${brightness.name}-${width.toInt()}.png');
           await output.parent.create(recursive:true);
           await output.writeAsBytes(bytes!.buffer.asUint8List()); image.dispose();
-        }
+        });
       });
     }
   }
