@@ -10,6 +10,7 @@ import '../../api/model/task.dart';
 import '../../util/message.dart';
 import '../../util/util.dart';
 import '../../asan/task_statistics.dart';
+import '../../asan/technical_text.dart';
 import '../modules/app/controllers/app_controller.dart';
 import '../modules/task/controllers/task_controller.dart';
 import '../modules/task/controllers/task_downloaded_controller.dart';
@@ -541,14 +542,14 @@ class BuildTaskListView extends GetView {
                   ListTile(
                       title: Row(
                         children: [
-                          Expanded(child: Text(task.name)),
+                          Expanded(child: AsanTechnicalText(task.name)),
                           // Show pending update indicator
                           if (appController.pendingUpdateTask.value?.id ==
                               task.id)
                             Tooltip(
                               message: 'updateUrlListeningTip'.tr,
                               child: Padding(
-                                padding: const EdgeInsets.only(left: 8),
+                                padding: const EdgeInsetsDirectional.only(start: 8),
                                 child: Icon(Icons.hearing,
                                     size: 16,
                                     color:
@@ -587,7 +588,7 @@ class BuildTaskListView extends GetView {
                             ),
                           ],
                         ],
-                      ).padding(left: 18)),
+                      ).paddingOnly(left: Directionality.of(context) == TextDirection.rtl ? 0 : 18, right: Directionality.of(context) == TextDirection.rtl ? 18 : 0)),
                       // Right side: ETA + Speed + Actions
                       Row(
                         mainAxisSize: MainAxisSize.min,

@@ -6,6 +6,7 @@ import 'package:path/path.dart' as path;
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../../api/api.dart';
+import '../../../../asan/technical_text.dart';
 import '../../../../database/database.dart';
 import '../../../../util/util.dart';
 import '../controllers/extension_controller.dart';
@@ -63,15 +64,14 @@ class ExtensionCard extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
+                        AsanTechnicalText(
                           item.title,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleSmall,
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          '${item.author} · v${item.version}',
+                          '${item.author} · ${'version'.tr} ${item.version}',
+                          textAlign: TextAlign.start,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.bodySmall,
@@ -101,11 +101,10 @@ class ExtensionCard extends StatelessWidget {
                 overflow: TextOverflow.ellipsis,
               ),
               const Spacer(),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.center,
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Row(
+                  Row(
                       children: [
                         if (store != null) ...[
                           _metricItem(
@@ -116,9 +115,11 @@ class ExtensionCard extends StatelessWidget {
                         ],
                       ],
                     ),
-                  ),
-                  Row(
-                    mainAxisSize: MainAxisSize.min,
+                  const SizedBox(height: 4),
+                  Wrap(
+                    alignment: WrapAlignment.end,
+                    spacing: 2,
+                    runSpacing: 4,
                     children: [
                       if (installed != null && canUpdate)
                         IconButton.filledTonal(
@@ -152,7 +153,7 @@ class ExtensionCard extends StatelessWidget {
                         ),
                       if ((item.repoUrl ?? '').isNotEmpty)
                         IconButton(
-                          tooltip: 'GitHub',
+                          tooltip: 'extensionSource'.tr,
                           onPressed: () => launchUrl(Uri.parse(item.repoUrl!)),
                           icon: const Icon(Icons.code),
                         ),
@@ -177,9 +178,9 @@ class ExtensionCard extends StatelessWidget {
           ),
         ),
         if (installedFlag && canUpdate)
-          Positioned(
+          PositionedDirectional(
             top: 10,
-            right: 10,
+            end: 10,
             child: _updateDot(),
           ),
       ],

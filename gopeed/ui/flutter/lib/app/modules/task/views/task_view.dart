@@ -6,6 +6,7 @@ import 'package:path/path.dart' as path;
 import '../../../../api/model/task.dart';
 import '../../../../util/file_explorer.dart';
 import '../../../../util/util.dart';
+import '../../../../asan/technical_text.dart';
 import '../../../routes/app_pages.dart';
 import '../../../views/copy_button.dart';
 import '../controllers/task_controller.dart';
@@ -29,13 +30,9 @@ class TaskView extends GetView<TaskController> {
             preferredSize: const Size.fromHeight(56),
             child: AppBar(
               bottom: TabBar(
-                tabs: const [
-                  Tab(
-                    icon: Icon(Icons.file_download),
-                  ),
-                  Tab(
-                    icon: Icon(Icons.done),
-                  ),
+                tabs: [
+                  Tab(text: 'downloading'.tr),
+                  Tab(text: 'downloaded'.tr),
                 ],
                 onTap: (index) {
                   if (controller.tabIndex.value != index) {
@@ -111,10 +108,7 @@ class TaskView extends GetView<TaskController> {
     final showText = text ?? "";
     return Tooltip(
       message: showText,
-      child: Text(
-        showText,
-        overflow: TextOverflow.ellipsis,
-      ),
+      child: AsanTechnicalText(showText),
     );
   }
 }

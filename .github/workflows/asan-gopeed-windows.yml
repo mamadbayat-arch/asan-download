@@ -28,10 +28,19 @@ jobs:
         run: node gopeed/browser-extension/test-background.mjs
       - name: Build and test Asan Download
         shell: pwsh
+        env:
+          ASAN_UI_SHOTS: '1'
         run: ./BuildGopeed.ps1
       - name: Corresponding GPL source
         shell: pwsh
-        run: git archive --format=zip --output=GopeedRelease/AsanDownload-Gopeed-2.0.0-Source.zip HEAD gopeed BuildGopeed.ps1 GOPEED-FORK.md
+        run: git archive --format=zip --output=GopeedRelease/AsanDownload-Gopeed-2.0.1-Source.zip HEAD gopeed BuildGopeed.ps1 GOPEED-FORK.md
+      - name: Persian UI screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: AsanDownload-Persian-UI
+          path: gopeed/ui/flutter/build/asan-ui/*.png
+          if-no-files-found: ignore
       - uses: actions/upload-artifact@v4
         with:
           name: AsanDownload-Gopeed-Windows

@@ -1,0 +1,9 @@
+@font-face{font-family:Kalameh;src:url('fonts/KalamehWeb-Regular.woff2') format('woff2');font-weight:400;font-display:swap}
+@font-face{font-family:Kalameh;src:url('fonts/KalamehWeb-Bold.woff2') format('woff2');font-weight:700;font-display:swap}
+:root{color-scheme:light dark;--surface:#fff;--background:#f4f8f7;--text:#172d28;--muted:#53665f;--brand:#0d6e59;--status:#e5f3ed;--line:#d8e5df}
+*{box-sizing:border-box}body{width:336px;margin:0;padding:20px;background:var(--background);color:var(--text);font:400 15px/1.65 Kalameh,'Segoe UI',sans-serif;letter-spacing:0;text-align:start}
+header{display:flex;align-items:center;gap:12px;margin-block-end:20px}.logo{display:block;flex:none;object-fit:contain}h1{font-size:17px;font-weight:700;margin:0}small,footer{font-size:12px;color:var(--muted)}
+.toggle{display:flex;align-items:center;gap:10px;min-height:52px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--surface);cursor:pointer}input{width:18px;height:18px;margin:0;flex:none;accent-color:var(--brand)}
+.help{color:var(--muted);margin-block:14px}button{display:flex;align-items:center;justify-content:center;width:100%;min-height:46px;padding:10px 16px;border:0;border-radius:12px;background:var(--brand);color:#fff;font:700 15px/1.6 Kalameh,'Segoe UI',sans-serif;cursor:pointer}button:disabled{opacity:.65;cursor:wait}button:hover:enabled{filter:brightness(1.08)}
+button:focus-visible,input:focus-visible{outline:3px solid #6dbca5;outline-offset:3px}#status{min-height:76px;padding:12px;margin-block:14px;border-radius:10px;background:var(--status)}footer{padding-block-start:2px}
+@media(prefers-color-scheme:dark){:root{--surface:#172b25;--background:#102019;--text:#e6f2eb;--muted:#bdd0c4;--brand:#157e64;--status:#1d372a;--line:#345244}}

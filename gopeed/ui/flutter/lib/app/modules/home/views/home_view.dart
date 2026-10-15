@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 
 import '../../../routes/app_pages.dart';
 import '../../../../asan/legacy_history.dart';
+import '../../../../asan/sidebar.dart';
 import '../../../../asan/hamtavar_ad.dart';
 import '../../../../asan/problem_report.dart';
 import '../../../views/responsive_builder.dart';
@@ -32,47 +33,15 @@ class HomeView extends GetView<HomeController> {
             // crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               !ResponsiveBuilder.isNarrow(context)
-                  ? NavigationRail(
-                      extended: true,
-                      labelType: NavigationRailLabelType.none,
-                      minExtendedWidth: 170,
-                      groupAlignment: 0,
-                      // useIndicator: false,
-                      onDestinationSelected: (int index) {
-                        controller.currentIndex.value = index;
-                        switch (index) {
-                          case 0:
-                            delegate.offAndToNamed(Routes.TASK);
-                            break;
-                          case 1:
-                            delegate.offAndToNamed(Routes.EXTENSION);
-                            break;
-                          case 2:
-                            delegate.offAndToNamed(Routes.SETTING);
-                            break;
-                        }
-                      },
-                      destinations: [
-                        NavigationRailDestination(
-                          icon: const Icon(Icons.task),
-                          selectedIcon: const Icon(Icons.task),
-                          label: Text('task'.tr),
-                        ),
-                        NavigationRailDestination(
-                          icon: const Icon(Icons.extension),
-                          selectedIcon: const Icon(Icons.extension),
-                          label: Text('extensions'.tr),
-                        ),
-                        NavigationRailDestination(
-                          icon: const Icon(Icons.settings),
-                          selectedIcon: const Icon(Icons.settings),
-                          label: Text('setting'.tr),
-                        ),
-                      ],
+                  ? AsanSidebar(
                       selectedIndex: controller.currentIndex.value,
-                      leading: Column(children: [Image.asset('assets/icon/asan-wordmark.png', width:145,height:48),const Text('آسان دانلود')]),
-                      trailing: SizedBox(width:160,child:Column(mainAxisSize:MainAxisSize.min,children:[TextButton.icon(onPressed:()=>Get.to(()=>const LegacyHistoryPage()),icon:const Icon(Icons.history_rounded),label:const Text('دانلودهای نسخهٔ قبلی')),TextButton.icon(onPressed:()=>Get.dialog(const AsanProblemReport()),icon:const Icon(Icons.bug_report_outlined),label:const Text('گزارش مشکل')),const HamtavarAd()])),
-                      // trailing: const Icon(Icons.info_outline),
+                      onSelect: (index) {
+                        controller.currentIndex.value = index;
+                        delegate.offAndToNamed([Routes.TASK, Routes.EXTENSION, Routes.SETTING][index]);
+                      },
+                      onHistory: () => Get.to(() => const LegacyHistoryPage()),
+                      onReport: () => Get.dialog(const AsanProblemReport()),
+                      footer: const HamtavarAd(),
                     )
                   : const SizedBox.shrink(),
               Expanded(

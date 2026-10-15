@@ -15,7 +15,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 2.0.0+1
+version: 2.0.1+1
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -100,7 +100,7 @@ dev_dependencies:
   # activated in the `analysis_options.yaml` file located at the root of your
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
-  flutter_lints: ^2.0.0
+  flutter_lints: ^2.0.1
   ffigen: ^8.0.2
   # build json model: flutter pub run build_runner build --delete-conflicting-outputs
   build_runner: ^2.2.1
@@ -137,6 +137,12 @@ flutter:
   # list giving the asset and other descriptors for the font. For
   # example:
   fonts:
+    - family: Kalameh
+      fonts:
+        - asset: assets/fonts/Kalameh-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Kalameh-Bold.ttf
+          weight: 700
     - family: Gopeed
       fonts:
         - asset: assets/fonts/Gopeed.ttf

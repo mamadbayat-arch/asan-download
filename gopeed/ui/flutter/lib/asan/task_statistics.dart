@@ -13,4 +13,25 @@ class SpeedUnits {
 }
 class AsanSpeed extends StatefulWidget{const AsanSpeed(this.bytes,{super.key});final int bytes;@override State<AsanSpeed> createState()=>_SpeedState();}
 class _SpeedState extends State<AsanSpeed>{@override void initState(){super.initState();SpeedUnits.load();}@override Widget build(BuildContext context)=>ValueListenableBuilder<bool>(valueListenable:SpeedUnits.bits,builder:(_,bits,__)=>TextButton(onPressed:SpeedUnits.toggle,child:Text(formatDownloadSpeed(widget.bytes,bits),textDirection:TextDirection.ltr)));}
-class TaskStatistics extends StatelessWidget{const TaskStatistics(this.task,{super.key});final Task task;@override Widget build(BuildContext context)=>ValueListenableBuilder<bool>(valueListenable:SpeedUnits.bits,builder:(_,bits,__){final used=task.progress.used;final average=used>0?formatDownloadSpeed(task.progress.downloaded/(used/1000000000),bits):'—';return Padding(padding:const EdgeInsetsDirectional.fromSTEB(16,0,16,10),child:Align(alignment:AlignmentDirectional.centerStart,child:Text('تاریخ: ${persianCompletionDate(task.updatedAt)}  •  مدت: ${activeDuration(used)}  •  میانگین: $average',style:Theme.of(context).textTheme.bodySmall)));});}
+class TaskStatistics extends StatelessWidget {
+ const TaskStatistics(this.task,{super.key});
+ final Task task;
+ @override Widget build(BuildContext context)=>ValueListenableBuilder<bool>(
+  valueListenable:SpeedUnits.bits,builder:(_,bits,__){
+   final used=task.progress.used;
+   final average=used>0?formatDownloadSpeed(task.progress.downloaded/(used/1000000000),bits):'—';
+   return Padding(padding:const EdgeInsetsDirectional.fromSTEB(16,8,16,14),
+    child:AsanDownloadMetrics(date:persianCompletionDate(task.updatedAt),duration:activeDuration(used),average:average));
+ });
+}
+class AsanDownloadMetrics extends StatelessWidget {
+ const AsanDownloadMetrics({super.key,required this.date,required this.duration,required this.average});
+ final String date,duration,average;
+ @override Widget build(BuildContext context)=>Wrap(spacing:20,runSpacing:8,children:[
+  for(final entry in [('تاریخ',date),('مدت',duration),('میانگین',average)])
+   Row(mainAxisSize:MainAxisSize.min,crossAxisAlignment:CrossAxisAlignment.center,children:[
+    Text('${entry.$1}:',style:Theme.of(context).textTheme.bodySmall),const SizedBox(width:6),
+    Text(entry.$2,textDirection:TextDirection.ltr,style:Theme.of(context).textTheme.bodySmall),
+   ]),
+ ]);
+}

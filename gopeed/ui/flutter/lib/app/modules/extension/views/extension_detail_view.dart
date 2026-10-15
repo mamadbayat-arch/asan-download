@@ -9,6 +9,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../../../api/model/extension.dart';
 import '../../../../api/model/store_extension.dart';
 import '../../../../util/message.dart';
+import '../../../../asan/technical_text.dart';
 import '../../../../util/util.dart';
 import '../controllers/extension_controller.dart';
 
@@ -32,19 +33,19 @@ class ExtensionDetailDrawer extends GetView<ExtensionController> {
         child: Column(
           children: [
             Padding(
-              padding: const EdgeInsets.fromLTRB(16, 14, 12, 10),
+              padding: const EdgeInsetsDirectional.fromSTEB(16, 14, 12, 10),
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
+                    child: AsanTechnicalText(
                       extension.title,
                       style: Theme.of(context).textTheme.titleLarge,
                       maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   IconButton(
                     onPressed: onClose,
+                    tooltip: 'close'.tr,
                     icon: const Icon(Icons.close),
                   )
                 ],
@@ -74,8 +75,8 @@ class ExtensionDetailDrawer extends GetView<ExtensionController> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                  '${extension.author} • v${extension.version}'),
+                              AsanTechnicalText(
+                                  '${extension.author} • ${'version'.tr} ${extension.version}'),
                               const SizedBox(height: 6),
                               Text(
                                 extension.description,
@@ -150,7 +151,7 @@ class ExtensionDetailDrawer extends GetView<ExtensionController> {
                           onPressed: () =>
                               launchUrl(Uri.parse(extension.repoUrl)),
                           icon: const Icon(Icons.code),
-                          label: const Text('GitHub'),
+                          label: Text('extensionSource'.tr),
                         ),
                       ],
                     ),
@@ -175,7 +176,7 @@ class ExtensionDetailDrawer extends GetView<ExtensionController> {
         final info = snapshot.data;
         final markdown = info?.content ?? extension.readme ?? '';
         if (markdown.trim().isEmpty) {
-          return Text('No README',
+          return Text('extensionNoReadme'.tr,
               style: Theme.of(context).textTheme.bodyMedium);
         }
 

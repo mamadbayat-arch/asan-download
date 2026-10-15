@@ -10,7 +10,7 @@ $taskShell=New-Object -ComObject WScript.Shell
 foreach($taskPlace in @([Environment]::GetFolderPath('DesktopDirectory'),[Environment]::GetFolderPath('Programs'))){$taskShortcut=$taskShell.CreateShortcut((Join-Path $taskPlace 'آسان دانلود ۲.lnk'));$taskShortcut.TargetPath=Join-Path $taskTarget 'AsanDownload.exe';$taskShortcut.WorkingDirectory=$taskTarget;$taskShortcut.IconLocation=$taskShortcut.TargetPath+',0';$taskShortcut.Save()}
 $taskRegistry='HKCU:/Software/Microsoft/Windows/CurrentVersion/Uninstall/AsanDownloadNext';New-Item -Path $taskRegistry -Force|Out-Null
 New-ItemProperty -LiteralPath $taskRegistry -Name DisplayName -Value 'آسان دانلود ۲' -Force|Out-Null
-New-ItemProperty -LiteralPath $taskRegistry -Name DisplayVersion -Value '2.0.0' -Force|Out-Null
+New-ItemProperty -LiteralPath $taskRegistry -Name DisplayVersion -Value '2.0.1' -Force|Out-Null
 New-ItemProperty -LiteralPath $taskRegistry -Name Publisher -Value MehrNoor -Force|Out-Null
 New-ItemProperty -LiteralPath $taskRegistry -Name UninstallString -Value ('powershell.exe -NoProfile -ExecutionPolicy Bypass -File "'+(Join-Path $taskTarget 'Uninstall.ps1')+'"') -Force|Out-Null
 Start-Process -FilePath (Join-Path $taskTarget 'AsanDownload.exe') -WindowStyle Hidden

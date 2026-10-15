@@ -201,11 +201,11 @@ class ExtensionView extends GetView<ExtensionController> {
   }
 
   Widget _buildMarketToolbar(BuildContext context) {
-    final narrow = ResponsiveBuilder.isNarrow(context);
+    final narrow = MediaQuery.sizeOf(context).width < 1150;
     InputDecoration decoration() {
-      return const InputDecoration(
-        hintText: '搜索扩展...',
-        hintStyle: TextStyle(fontSize: 13),
+      return InputDecoration(
+        hintText: 'extensionSearchHint'.tr,
+        labelText: 'extensionStoreTitle'.tr,
       );
     }
 
@@ -278,7 +278,9 @@ class ExtensionView extends GetView<ExtensionController> {
         onTap: () => controller.changeSort(sort),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 6),
+          constraints: const BoxConstraints(minHeight: 44),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(7),
             color: selected
@@ -289,8 +291,9 @@ class ExtensionView extends GetView<ExtensionController> {
             label,
             style: TextStyle(
               fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
-              fontSize: 12,
-              height: 1.0,
+              fontSize: 13,
+              height: 1.55,
+              letterSpacing: 0,
               color: selected
                   ? Theme.of(context).colorScheme.primary
                   : Theme.of(context)
@@ -305,7 +308,7 @@ class ExtensionView extends GetView<ExtensionController> {
     }
 
     return Container(
-      constraints: const BoxConstraints(maxWidth: 310),
+      constraints: const BoxConstraints(maxWidth: 400),
       padding: const EdgeInsets.all(2),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface.withValues(alpha: 0.35),
@@ -315,18 +318,18 @@ class ExtensionView extends GetView<ExtensionController> {
         borderRadius: BorderRadius.circular(8),
       ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
+        mainAxisSize: MainAxisSize.max,
         children: [
-          tab(StoreExtensionSort.stars, 'extensionSortStars'.tr),
-          tab(StoreExtensionSort.installs, 'extensionSortInstalls'.tr),
-          tab(StoreExtensionSort.updated, 'extensionSortUpdated'.tr),
+          Expanded(child: tab(StoreExtensionSort.stars, 'extensionSortStars'.tr)),
+          Expanded(child: tab(StoreExtensionSort.installs, 'extensionSortInstalls'.tr)),
+          Expanded(child: tab(StoreExtensionSort.updated, 'extensionSortUpdated'.tr)),
         ],
       ),
     );
   }
 
   Widget _buildFilterBar(BuildContext context) {
-    final narrow = ResponsiveBuilder.isNarrow(context);
+    final narrow = MediaQuery.sizeOf(context).width < 1150;
     Widget option(ExtensionListFilter filter, String text) {
       final selected = controller.listFilter.value == filter;
       return InkWell(
@@ -351,8 +354,9 @@ class ExtensionView extends GetView<ExtensionController> {
       );
     }
 
-    final left = Row(
-      mainAxisSize: MainAxisSize.min,
+    final left = Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
         option(ExtensionListFilter.market, 'extensionFilterMarket'.tr),
         const SizedBox(width: 8),
@@ -360,8 +364,9 @@ class ExtensionView extends GetView<ExtensionController> {
       ],
     );
 
-    final right = Row(
-      mainAxisSize: MainAxisSize.min,
+    final right = Wrap(
+      spacing: 8,
+      runSpacing: 8,
       children: [
         TextButton.icon(
           onPressed: controller.toggleInstallTools,
@@ -406,7 +411,8 @@ class ExtensionView extends GetView<ExtensionController> {
     if (items.isEmpty) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 24),
-        child: Text('extensionStoreEmpty'.tr),
+        child: Text((controller.listFilter.value == ExtensionListFilter.installed
+            ? 'extensionInstalledEmpty' : 'extensionStoreEmpty').tr),
       );
     }
 
@@ -420,8 +426,7 @@ class ExtensionView extends GetView<ExtensionController> {
                 : width >= 700
                     ? 2
                     : 1;
-        const cardHeight = 180.0;
-        final childAspectRatio = (width / crossAxisCount) / cardHeight;
+        final cardHeight = 244.0 * MediaQuery.textScalerOf(context).scale(1).clamp(1.0, 1.6);
 
         return GridView.builder(
           itemCount: items.length,
@@ -429,7 +434,7 @@ class ExtensionView extends GetView<ExtensionController> {
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
             crossAxisCount: crossAxisCount,
-            childAspectRatio: childAspectRatio,
+            mainAxisExtent: cardHeight,
             crossAxisSpacing: 10,
             mainAxisSpacing: 10,
           ),
@@ -492,12 +497,12 @@ class ExtensionView extends GetView<ExtensionController> {
     await showGeneralDialog(
       context: Get.context!,
       barrierDismissible: true,
-      barrierLabel: 'close',
+      barrierLabel: 'close'.tr,
       barrierColor: Colors.black54,
       transitionDuration: const Duration(milliseconds: 180),
       pageBuilder: (context, animation, secondaryAnimation) {
         return Align(
-          alignment: Alignment.centerRight,
+          alignment: AlignmentDirectional.centerEnd,
           child: Material(
             child: SizedBox(
               width: (MediaQuery.of(context).size.width * 0.5)
@@ -513,7 +518,7 @@ class ExtensionView extends GetView<ExtensionController> {
       },
       transitionBuilder: (context, animation, secondaryAnimation, child) {
         final offset = Tween<Offset>(
-          begin: const Offset(1, 0),
+          begin: Offset(Directionality.of(context) == TextDirection.rtl ? -1 : 1, 0),
           end: Offset.zero,
         ).animate(animation);
         return SlideTransition(position: offset, child: child);
@@ -562,7 +567,8 @@ class ExtensionView extends GetView<ExtensionController> {
                                             Icon(Icons.question_mark, size: 10),
                                       ),
                                     ),
-                            ).paddingOnly(right: 10),
+                            ).paddingOnly(left: Directionality.of(context) == TextDirection.rtl ? 10 : 0,
+                              right: Directionality.of(context) == TextDirection.rtl ? 0 : 10),
                             Expanded(child: settingItem),
                           ],
                         );

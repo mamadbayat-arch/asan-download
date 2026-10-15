@@ -1,4 +1,4 @@
-param([string]$Version='2.0.0',[switch]$SkipTests)
+param([string]$Version='2.0.1',[switch]$SkipTests)
 $ErrorActionPreference='Stop'
 $taskProject=$PSScriptRoot
 $taskSource=Join-Path $taskProject 'gopeed'
