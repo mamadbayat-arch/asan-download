@@ -66,7 +66,6 @@ void main() {
             if(width>=768) AsanSidebar(selectedIndex:1,onSelect:(_){},onHistory:(){},onReport:(){},footer:const SizedBox.shrink()),
             Expanded(child:ExtensionView()),
           ]))))],
-          initialRoute:'/',
         ));
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);

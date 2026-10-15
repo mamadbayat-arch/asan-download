@@ -15,7 +15,9 @@ class AsanSidebar extends StatelessWidget {
     child: Material(color: Theme.of(context).colorScheme.surface,
       child: SafeArea(child: ListView(padding: const EdgeInsets.all(16), children: [
         Padding(padding: const EdgeInsets.symmetric(vertical: 16),
-          child: Image.asset('assets/icon/asan-wordmark.png', width: 156, height: 52, fit: BoxFit.contain)),
+          child: Image.asset('assets/icon/asan-wordmark.png', width: 156, height: 52, fit: BoxFit.contain,
+            color: Theme.of(context).brightness == Brightness.dark ? Theme.of(context).colorScheme.onSurface : null,
+            colorBlendMode: BlendMode.srcIn)),
         const SizedBox(height: 16),
         for (final entry in [
           (Icons.download_rounded, 'task'), (Icons.extension_rounded, 'extensions'), (Icons.settings_rounded, 'setting'),
