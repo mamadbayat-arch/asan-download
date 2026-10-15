@@ -18,7 +18,10 @@ try{
  assert.equal((await call(update,{method:'PATCH',headers:{...publicHeaders,Cookie:cookie},body:changes})).status,403);assert.equal((await call(update,{method:'PATCH',headers,body:changes})).status,200);
  listing=await(await call('/api/admin/reports',{headers})).json();assert.equal(listing.items[0].status,'resolved');assert.equal(JSON.parse(fs.readFileSync(path.join(dataDir,'reports',report.id+'.json'))).notes,'اصلاح شد');
  assert.equal((await call('/data/admin.json')).status,404);assert.equal((await call('/reports/'+report.id+'.json')).status,404);
- const release=await(await call('/api/public/release')).json();assert.equal(release.version,'1.6.1');const raw=Buffer.from(await(await call(release.updateUrl)).arrayBuffer());assert.equal(raw.length,release.exeSize);assert.equal(crypto.createHash('sha256').update(raw).digest('hex'),release.sha256);
- const range=await call(release.downloadUrl,{headers:{Range:'bytes=0-63'}});assert.equal(range.status,206);assert.equal((await range.arrayBuffer()).byteLength,64);
- console.log('PASS: landing, reports page, login, private reports, input validation, idempotency, CSRF, status persistence, installer version/hash and byte ranges.');
+ const release=await(await call('/api/public/release')).json(),manifest=path.join(home,'public','release.json');
+ if(fs.existsSync(manifest)){
+  const built=JSON.parse(fs.readFileSync(manifest,'utf8'));assert.equal(release.version,built.version);const raw=Buffer.from(await(await call(release.updateUrl)).arrayBuffer());assert.equal(raw.length,release.exeSize);assert.equal(crypto.createHash('sha256').update(raw).digest('hex'),release.sha256);
+  const range=await call(release.downloadUrl,{headers:{Range:'bytes=0-63'}});assert.equal(range.status,206);assert.equal((await range.arrayBuffer()).byteLength,64);
+ }else assert.deepEqual(release,{available:false});
+ console.log('PASS: landing, reports, login, validation, idempotency, CSRF, persistence and release metadata; built releases also verify hashes and byte ranges.');
 }finally{server.kill('SIGTERM');await new Promise(resolve=>server.exitCode!==null?resolve():server.once('exit',resolve));fs.rmSync(dataDir,{recursive:true,force:true});}

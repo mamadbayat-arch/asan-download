@@ -37,6 +37,7 @@ Downloads requiring browser cookies or login, streaming media and webpage URLs a
 ./Test.ps1
 ./TestUpdates.ps1
 node BrowserExtension/test-background.mjs
+node server/test.mjs
 ```
 
 These cover download integrity, pause/resume, history persistence and recovery, Persian dates, UI behavior, signed-update validation and rollback, browser consent/fallback and unwanted startup requests.
