@@ -7,6 +7,6 @@ void main(){test('browser links require HTTP(S), a host and no embedded credenti
   Get.testMode=true;bool? answer;
   await tester.pumpWidget(GetMaterialApp(home:Scaffold(body:TextButton(onPressed:()async{answer=await confirmBrowserDownload('https://example.com/file.zip?private=value');},child:const Text('open'))),builder:(_,child)=>Overlay(initialEntries:[OverlayEntry(builder:(_)=>child!)])));
   await tester.tap(find.text('open'));await tester.pumpAndSettle();expect(answer,isNull);expect(find.text('این فایل دانلود شود؟'),findsOneWidget);expect(find.textContaining('private=value'),findsNothing);
-  await tester.tap(find.text(accept?'دانلود کن':'انصراف'));await tester.pumpAndSettle();expect(answer,accept);await Get.reset();
+  await tester.tap(find.text(accept?'دانلود کن':'انصراف'));await tester.pumpAndSettle();expect(answer,accept);Get.reset();
  });}
 }
