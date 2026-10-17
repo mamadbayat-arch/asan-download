@@ -23,6 +23,7 @@ import '../../../../api/model/create_task.dart';
 import '../../../../api/model/downloader_config.dart';
 import '../../../../api/model/install_extension.dart';
 import '../../../../api/model/request.dart';
+import '../../../../api/model/resolve_task.dart';
 import '../../../../api/model/result.dart';
 import '../../../../core/common/start_config.dart';
 import '../../../../core/libgopeed_boot.dart';
@@ -37,6 +38,7 @@ import '../../../../util/package_info.dart';
 import '../../../../util/updater.dart';
 import '../../../../util/util.dart';
 import '../../../../asan/browser_confirmation.dart';
+import '../../../../asan/browser_handoff.dart';
 import '../../../../asan/legacy_history.dart';
 import '../../../../api/model/options.dart' as task_options;
 import '../../../routes/app_pages.dart';
@@ -343,9 +345,13 @@ class AppController extends GetxController with WindowListener, TrayListener {
           if(!validBrowserUrl(url)||_asanPromptActive){await ctx.writeJSON({'accepted':false,'reason':'invalid_or_busy'});return;}
           _asanPromptActive=true;
           try{await windowManager.show();await windowManager.focus();
-            if(!await confirmBrowserDownload(url)){await ctx.writeJSON({'accepted':false,'cancelled':true});return;}
-            await createTask(CreateTask(req:Request(url:url),opts:task_options.Options(path:downloaderConfig.value.downloadDir)));
-            await ctx.writeJSON({'accepted':true});
+            final options = task_options.Options(path:downloaderConfig.value.downloadDir);
+            final reply = await handoffBrowserDownload(
+              confirm: () => confirmBrowserDownload(url),
+              prepare: () async => (await resolve(ResolveTask(req: Request(url:url), opts:options))).id,
+              create: (id) async { await createTask(CreateTask(rid:id, opts:options)); },
+            );
+            await ctx.writeJSON(reply);
           }catch(_){await ctx.writeJSON({'accepted':false,'reason':'browser_required'});}
           finally{_asanPromptActive=false;}
         },

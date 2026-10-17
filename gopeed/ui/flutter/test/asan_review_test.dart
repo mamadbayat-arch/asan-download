@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:get/get.dart';
 import 'package:gopeed/api/extension_catalog.dart';
+import 'package:gopeed/asan/browser_handoff.dart';
 import 'package:gopeed/api/model/store_extension.dart';
 import 'package:gopeed/app/modules/extension/controllers/extension_controller.dart';
 import 'package:gopeed/util/updater.dart';
@@ -15,6 +16,32 @@ StoreExtensionPage page(String id) => ExtensionCatalog.selectPage([entry(id)]);
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
   tearDown(() => Get.reset());
+  test('origin failure resumes browser instead of cancelling it for an unresolved task', () async {
+    var created = false;
+    final reply = await handoffBrowserDownload(confirm: () async => true,
+      prepare: () async => throw Exception('HTTP 403'), create: (_) async { created = true; });
+    expect(reply['accepted'], false); expect(reply['reason'], 'browser_required'); expect(created, false);
+  });
+  test('browser cancel never resolves or creates a download', () async {
+    final reply = await handoffBrowserDownload(confirm: () async => false,
+      prepare: () async => throw StateError('must not resolve'), create: (_) async => fail('must not create'));
+    expect(reply['cancelled'], true);
+  });
+  test('browser waits for successful origin resolution and creation', () async {
+    final pending = Completer<String>(); var created = false, answered = false;
+    final transfer = handoffBrowserDownload(confirm: () async => true,
+      prepare: () => pending.future, create: (id) async { expect(id, 'resolved'); created = true; });
+    transfer.then((_) => answered = true);
+    await Future<void>.delayed(Duration.zero); expect(answered, false);
+    pending.complete('resolved'); expect((await transfer)['accepted'], true); expect(created, true);
+  });
+  test('slow origin returns browser fallback and creates no delayed task', () async {
+    final pending = Completer<String>(); var created = false;
+    final reply = await handoffBrowserDownload(confirm: () async => true,
+      prepare: () => pending.future, create: (_) async { created = true; }, prepareTimeout: Duration.zero);
+    expect(reply['accepted'], false);
+    pending.complete('late'); await Future<void>.delayed(Duration.zero); expect(created, false);
+  });
   test('release feed rejects another app, downgrades and malformed versions', () {
     final feed = <String,dynamic>{'application':'ir.hamtavar.asandownload2',
       'platform':'windows-x64','channel':'preview','version':'2.0.10','notes':'تغییرات'};
