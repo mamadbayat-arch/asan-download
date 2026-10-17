@@ -20,7 +20,6 @@ import 'util/locale_manager.dart';
 import 'util/log_util.dart';
 import 'util/package_info.dart';
 import 'util/scheme_register/scheme_register.dart';
-import 'util/updater.dart';
 import 'util/util.dart';
 
 class StartupArgs {
@@ -157,11 +156,6 @@ Future<void> init(StartupArgs args) async {
         }
       }
 
-      try {
-        await installUpdater();
-      } catch (e) {
-        logger.e("updater install fail", e);
-      }
     }
   }();
 }

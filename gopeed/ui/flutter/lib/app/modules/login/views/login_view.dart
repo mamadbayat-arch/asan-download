@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:get/get.dart';
 
 import '../../../views/responsive_builder.dart';
@@ -82,8 +81,8 @@ class LoginView extends GetView<LoginController> {
                                 child: ClipRRect(
                                   borderRadius:
                                       BorderRadius.circular(isNarrow ? 16 : 20),
-                                  child: SvgPicture.asset(
-                                    'assets/icon/icon.svg',
+                                  child: Image.asset(
+                                    'assets/icon/icon_512.png',
                                     width: isNarrow ? 56 : 72,
                                     height: isNarrow ? 56 : 72,
                                     fit: BoxFit.cover,
@@ -92,11 +91,11 @@ class LoginView extends GetView<LoginController> {
                               ),
                               const SizedBox(height: 8),
                               Text(
-                                'Gopeed',
+                                'آسان دانلود',
                                 style: Get.textTheme.headlineLarge?.copyWith(
                                   fontWeight: FontWeight.w900,
                                   color: Get.theme.colorScheme.onSurface,
-                                  letterSpacing: 2.0,
+                                  letterSpacing: 0,
                                   fontSize: isNarrow ? 28 : 36,
                                 ),
                               ),

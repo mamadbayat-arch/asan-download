@@ -1012,6 +1012,7 @@ func (d *Downloader) watch(task *Task) {
 		return
 	}
 
+	task.timer.Pause()
 	task.Progress.Used = task.timer.Used()
 	if task.Meta.Res.Size == 0 {
 		task.Meta.Res.Size = task.fetcher.Progress().TotalDownloaded()
@@ -1092,6 +1093,8 @@ func (d *Downloader) watch(task *Task) {
 
 func (d *Downloader) doOnError(task *Task, err error) {
 	d.Logger.Warn().Err(err).Msgf("task download failed, task id: %s", task.ID)
+	task.timer.Pause()
+	task.Progress.Used = task.timer.Used()
 	task.updateStatus(base.DownloadStatusError)
 	d.triggerOnError(task, err)
 	if task.Status == base.DownloadStatusError {
@@ -1315,6 +1318,7 @@ func (d *Downloader) doPause(task *Task) (err error) {
 
 		task.updateStatus(base.DownloadStatusPause)
 		task.timer.Pause()
+		task.Progress.Used = task.timer.Used()
 		return
 	})
 	if err != nil {

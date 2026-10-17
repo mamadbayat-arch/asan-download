@@ -102,8 +102,6 @@ const esES = {
     'username': 'Nombre de usuario',
     'password': 'Contraseña',
     'thanks': 'Agradecimientos',
-    'thanksDesc':
-        '¡Gracias a todos los contribuyentes que han ayudado a construir y desarrollar la comunidad Gopeed!',
     'browserExtension': 'Extensión del Navegador',
     'launchAtStartup': 'Iniciar al Arranque',
     'runAsMenubarApp': 'Ejecutar como aplicación de barra de menú',

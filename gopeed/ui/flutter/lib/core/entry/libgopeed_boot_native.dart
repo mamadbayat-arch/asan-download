@@ -19,7 +19,7 @@ class LibgopeedBootNative implements LibgopeedBoot {
     if (Util.isDesktop()) {
       var libName = "libgopeed.";
       if (Platform.isWindows) {
-        libName += "dll";
+        libName = "asan_engine.dll";
       }
       if (Platform.isMacOS) {
         libName += "dylib";

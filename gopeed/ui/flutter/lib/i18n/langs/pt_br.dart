@@ -105,8 +105,6 @@ const ptBR = {
     'username': 'Usuário',
     'password': 'Senha',
     'thanks': 'Obrigado',
-    'thanksDesc':
-        'Obrigado a todos os colaboradores que ajudaram a construir e desenvolver a comunidade Gopeed!',
     'browserExtension': 'Extensões para Navegadores',
     'launchAtStartup': 'Launch at Startup',
     'runAsMenubarApp': 'Executar como aplicativo da barra de menus',

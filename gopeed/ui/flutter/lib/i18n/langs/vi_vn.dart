@@ -91,8 +91,6 @@ const viVN = {
     'username': 'Tên đăng nhập',
     'password': 'Mật khẩu',
     'thanks': 'Cảm ơn',
-    'thanksDesc':
-        'Cảm ơn tất cả những người đóng góp đã giúp xây dựng và phát triển cộng đồng Gopeed!',
     'browserExtension': 'Tiện ích mở rộng trình duyệt',
     'skipVerifyCert': 'Bỏ qua xác thực chứng chỉ',
     'archives': 'Tập tin nén',

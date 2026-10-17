@@ -1,21 +1,20 @@
 import 'package:flutter/material.dart';
 
-import '../../icon/gopeed_icons.dart';
 
 final Map<IconData, List<String>> iconConfigMap = {
-  Gopeed.install: ['exe', 'msi', 'dmg', 'deb', 'rpm'],
-  Gopeed.android: ['apk'],
-  Gopeed.app_store_ios: ['ipa'],
-  Gopeed.file_bt: ['torrent'],
-  Gopeed.cd: ['iso'],
-  Gopeed.html5: ['html', 'htm'],
-  Gopeed.file_alt: ['txt', 'md', 'log', 'csv', 'tsv', 'json', 'yaml', 'yml'],
-  Gopeed.file_pdf: ['pdf'],
-  Gopeed.file_word: ['doc', 'docx'],
-  Gopeed.file_excel: ['xls', 'xlsx'],
-  Gopeed.file_powerpoint: ['ppt', 'pptx'],
-  Gopeed.file_archive: ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'],
-  Gopeed.file_image: [
+  Icons.install_desktop_rounded: ['exe', 'msi', 'dmg', 'deb', 'rpm'],
+  Icons.android_rounded: ['apk'],
+  Icons.phone_iphone_rounded: ['ipa'],
+  Icons.hub_outlined: ['torrent'],
+  Icons.album_outlined: ['iso'],
+  Icons.language_rounded: ['html', 'htm'],
+  Icons.description_outlined: ['txt', 'md', 'log', 'csv', 'tsv', 'json', 'yaml', 'yml'],
+  Icons.picture_as_pdf_outlined: ['pdf'],
+  Icons.article_outlined: ['doc', 'docx'],
+  Icons.table_chart_outlined: ['xls', 'xlsx'],
+  Icons.slideshow_rounded: ['ppt', 'pptx'],
+  Icons.folder_zip_outlined: ['zip', 'rar', '7z', 'tar', 'gz', 'bz2', 'xz'],
+  Icons.image_outlined: [
     'jpg',
     'jpeg',
     'png',
@@ -25,9 +24,9 @@ final Map<IconData, List<String>> iconConfigMap = {
     'svg',
     'webp'
   ],
-  Gopeed.file_audio: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a'],
-  Gopeed.file_video: ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'],
-  Gopeed.file_code: [
+  Icons.audio_file_outlined: ['mp3', 'wav', 'flac', 'aac', 'ogg', 'wma', 'm4a'],
+  Icons.video_file_outlined: ['mp4', 'avi', 'mkv', 'mov', 'wmv', 'flv', 'webm'],
+  Icons.code_rounded: [
     'js',
     'css',
     'json',
@@ -43,7 +42,7 @@ final Map<IconData, List<String>> iconConfigMap = {
     'go',
     'rs'
   ],
-  Gopeed.file: [''],
+  Icons.insert_drive_file_outlined: [''],
 };
 
 final Map<String, IconData> _iconCache = Map.fromEntries(
@@ -68,9 +67,9 @@ String fileExt(String? name) {
 IconData fileIcon(String? name,
     {bool isFolder = false, bool isBitTorrent = false}) {
   if (isFolder) {
-    return isBitTorrent ? Gopeed.folder_bt : Gopeed.folder;
+    return isBitTorrent ? Icons.folder_shared_outlined : Icons.folder_outlined;
   }
 
   final ext = fileExt(name);
-  return _iconCache[ext] ?? Gopeed.file;
+  return _iconCache[ext] ?? Icons.insert_drive_file_outlined;
 }

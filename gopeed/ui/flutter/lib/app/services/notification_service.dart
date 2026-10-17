@@ -36,7 +36,7 @@ class NotificationService extends GetxService {
     final LinuxInitializationSettings initializationSettingsLinux =
         LinuxInitializationSettings(
       defaultActionName: 'Open notification',
-      defaultIcon: AssetsLinuxIcon('assets/icon/icon.png'),
+      defaultIcon: AssetsLinuxIcon('assets/icon/icon_512.png'),
     );
 
     String? windowsIconPath;
@@ -56,8 +56,8 @@ class NotificationService extends GetxService {
     final WindowsInitializationSettings initializationSettingsWindows =
         WindowsInitializationSettings(
       appName: 'Asan Download',
-      appUserModelId: 'com.gopeed.gopeed',
-      guid: '3c1bf3f4-3d91-4eaa-a33f-8705e71cf1ce', // unique guid
+      appUserModelId: 'ir.hamtavar.asandownload2',
+      guid: '9a34909d-e5eb-48ac-9c48-c92b4c06c2cf', // unique guid
       iconPath: windowsIconPath,
     );
 

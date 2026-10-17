@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
 import 'package:gopeed/app/views/copy_button.dart';
+import 'package:gopeed/asan/licenses_page.dart';
 import 'package:intl/intl.dart';
 import 'package:launch_at_startup/launch_at_startup.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -413,19 +414,19 @@ class SettingView extends GetView<SettingController> {
               OpenInNew(
                 text: "Chrome",
                 url:
-                    "https://downloader.hamtavar.ir/extension-guide.html",
+                    "https://downloader.hamtavar.ir/extension-guide-2.html",
               ),
               SizedBox(width: 10),
               OpenInNew(
                 text: "Edge",
                 url:
-                    "https://downloader.hamtavar.ir/extension-guide.html",
+                    "https://downloader.hamtavar.ir/extension-guide-2.html",
               ),
               SizedBox(width: 10),
               OpenInNew(
                 text: "Firefox",
                 url:
-                    "https://downloader.hamtavar.ir/extension-guide.html",
+                    "https://downloader.hamtavar.ir/extension-guide-2.html",
               ),
             ],
           ).paddingOnly(top: 5));
@@ -970,7 +971,7 @@ class SettingView extends GetView<SettingController> {
 
     // about config items start
     buildHomepage() {
-      const homePage = 'https://downloader.hamtavar.ir';
+      const homePage = 'https://downloader.hamtavar.ir/asan-2.html';
       return ListTile(
         title: Text('homepage'.tr),
         subtitle: const Text(homePage),
@@ -1032,13 +1033,11 @@ class SettingView extends GetView<SettingController> {
     }
 
     buildThanks() {
-      const thankPage =
-          'https://github.com/GopeedLab/gopeed/graphs/contributors';
       return ListTile(
-        title: Text('thanks'.tr),
-        subtitle: Text('thanksDesc'.tr),
+        title: Text('licenses'.tr),
+        subtitle: Text('licensesDesc'.tr),
         onTap: () {
-          launchUrl(Uri.parse(thankPage), mode: LaunchMode.externalApplication);
+          Navigator.of(context).push(MaterialPageRoute<void>(builder: (_) => const AsanLicensesPage()));
         },
       );
     }

@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../icon/gopeed_icons.dart';
 
 enum SortState { none, asc, desc }
 
@@ -60,7 +59,7 @@ class _SortIconState extends State<SortIconButton> {
         height: widget.size,
         child: _currentState == SortState.none
             ? Icon(
-                Gopeed.sort,
+                Icons.sort_rounded,
                 size: widget.size,
                 color: widget.color,
               )
@@ -71,7 +70,7 @@ class _SortIconState extends State<SortIconButton> {
                       alignment: Alignment.topCenter,
                       heightFactor: 0.5,
                       child: Icon(
-                        Gopeed.sort,
+                        Icons.sort_rounded,
                         size: widget.size,
                         color: _currentState == SortState.asc
                             ? (widget.activeColor ??
@@ -85,7 +84,7 @@ class _SortIconState extends State<SortIconButton> {
                       alignment: Alignment.bottomCenter,
                       heightFactor: 0.5,
                       child: Icon(
-                        Gopeed.sort,
+                        Icons.sort_rounded,
                         size: widget.size,
                         color: _currentState == SortState.desc
                             ? (widget.activeColor ??

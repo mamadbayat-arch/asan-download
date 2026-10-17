@@ -1,4 +1,4 @@
-name: Asan Download Gopeed Windows
+name: Asan Download Windows
 on:
   push:
     branches: [codex/gopeed-based]
@@ -31,9 +31,11 @@ jobs:
         env:
           ASAN_UI_SHOTS: '1'
         run: ./BuildGopeed.ps1
+      - name: Packaged Windows download and history
+        run: node gopeed/tools/smoke-windows.mjs
       - name: Corresponding GPL source
         shell: pwsh
-        run: git archive --format=zip --output=GopeedRelease/AsanDownload-Gopeed-2.0.1-Source.zip HEAD gopeed BuildGopeed.ps1 GOPEED-FORK.md
+        run: git archive --format=zip --output=GopeedRelease/AsanDownload-Gopeed-2.0.2-Source.zip HEAD gopeed BuildGopeed.ps1 GOPEED-FORK.md
       - name: Persian UI screenshots
         if: always()
         uses: actions/upload-artifact@v4

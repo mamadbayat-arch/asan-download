@@ -4,7 +4,7 @@ import 'dart:collection';
 import 'package:get/get.dart';
 
 import '../../../../api/api.dart';
-import '../../../../api/gopeed_site_api.dart';
+import '../../../../api/extension_catalog.dart';
 import '../../../../api/model/extension.dart';
 import '../../../../api/model/install_extension.dart';
 import '../../../../api/model/store_extension.dart';
@@ -57,6 +57,12 @@ class ExtensionListItem {
 }
 
 class ExtensionController extends GetxController {
+  ExtensionController({Future<StoreExtensionPage> Function(int, int, StoreExtensionSort, String)? loadCatalog})
+      : _loadCatalog = loadCatalog ?? ((page, limit, sort, query) => ExtensionCatalog.instance.getExtensions(page: page, limit: limit, sort: sort, query: query));
+  final Future<StoreExtensionPage> Function(int, int, StoreExtensionSort, String) _loadCatalog;
+  final storeError = ''.obs;
+  int _storeGeneration = 0;
+
   static const manualInstallBusyKey = '__manual_install__';
 
   final installedExtensions = <Extension>[].obs;
@@ -139,36 +145,34 @@ class ExtensionController extends GetxController {
   }
 
   Future<void> refreshStore() async {
+    final generation = ++_storeGeneration;
     loadingStore.value = true;
+    storeError.value = '';
     try {
-      final page = await GopeedSiteApi.instance.getExtensions(
-        page: 1,
-        limit: 20,
-        sort: storeSort.value,
-        query: storeQuery.value,
-      );
+      final page = await _loadCatalog(1, 20, storeSort.value, storeQuery.value);
+      if (generation != _storeGeneration) return;
       storeExtensions.assignAll(page.data);
       storePagination.value = page.pagination;
+    } catch (_) {
+      if (generation == _storeGeneration) storeError.value = 'extensionCatalogUnavailable'.tr;
     } finally {
-      loadingStore.value = false;
+      if (generation == _storeGeneration) loadingStore.value = false;
     }
   }
 
   Future<void> loadMoreStore() async {
     final pagination = storePagination.value;
-    if (pagination == null || !pagination.hasNext || loadingMoreStore.value) {
-      return;
-    }
+    if (pagination == null || !pagination.hasNext || loadingMoreStore.value || loadingStore.value) return;
+    final generation = _storeGeneration;
     loadingMoreStore.value = true;
     try {
-      final page = await GopeedSiteApi.instance.getExtensions(
-        page: pagination.page + 1,
-        limit: pagination.limit,
-        sort: storeSort.value,
-        query: storeQuery.value,
-      );
+      final page = await _loadCatalog(pagination.page + 1, pagination.limit, storeSort.value, storeQuery.value);
+      if (generation != _storeGeneration) return;
       storeExtensions.addAll(page.data);
       storePagination.value = page.pagination;
+      storeError.value = '';
+    } catch (_) {
+      if (generation == _storeGeneration) storeError.value = 'extensionCatalogUnavailable'.tr;
     } finally {
       loadingMoreStore.value = false;
     }
@@ -226,7 +230,6 @@ class ExtensionController extends GetxController {
       await loadInstalled(refreshUpdates: false);
       _backgroundCheckUpdate();
       _bumpStoreInstallCount(statsId);
-      _reportInstallSafe(statsId);
     });
   }
 
@@ -239,10 +242,8 @@ class ExtensionController extends GetxController {
       _backgroundCheckUpdate();
       if (installedId.isNotEmpty) {
         _bumpStoreInstallCount(installedId);
-        _reportInstallSafe(installedId);
       } else if (statsId != null && statsId.isNotEmpty) {
         _bumpStoreInstallCount(statsId);
-        _reportInstallSafe(statsId);
       }
     });
   }
@@ -269,7 +270,6 @@ class ExtensionController extends GetxController {
       await loadInstalled(refreshUpdates: false);
       _backgroundCheckUpdate();
       _bumpStoreInstallCount(extension.identity);
-      _reportInstallSafe(extension.identity);
     });
   }
 
@@ -321,16 +321,6 @@ class ExtensionController extends GetxController {
 
   void _backgroundCheckUpdate() {
     unawaited(checkUpdate());
-  }
-
-  void _reportInstallSafe(String id) {
-    unawaited(() async {
-      try {
-        await GopeedSiteApi.instance.reportExtensionInstall(id);
-      } catch (_) {
-        // Ignore stats reporting failures.
-      }
-    }());
   }
 
   void _bumpStoreInstallCount(String id) {

@@ -118,7 +118,7 @@ class _DirectorySelectorState extends State<DirectorySelector> {
       // For the sake of user experience, it is decided to only support selecting the application's internal directory and the system download directory. Also, a test for file write permission is performed when selecting the system download directory. If it cannot be written, selection is not allowed.
       if (Util.isAndroid() && widget.showAndoirdToggle) {
         final isSwitchToDownloadDir =
-            widget.controller.text.endsWith('/Gopeed');
+            (widget.controller.text.endsWith('/AsanDownload') || widget.controller.text.endsWith('/Gopeed'));
 
         return ToggleSwitch(
           initialLabelIndex: isSwitchToDownloadDir ? 1 : 0,
@@ -132,7 +132,7 @@ class _DirectorySelectorState extends State<DirectorySelector> {
                       (await getApplicationDocumentsDirectory()).path;
             } else {
               widget.controller.text =
-                  '${(await DownloadsPath.downloadsDirectory())!.path}/Gopeed';
+                  '${(await DownloadsPath.downloadsDirectory())!.path}/AsanDownload';
             }
           },
           cancelToggle: (index) async {
@@ -161,7 +161,7 @@ class _DirectorySelectorState extends State<DirectorySelector> {
             // Check write permission
             final fileRandomeName =
                 "test_${DateTime.now().millisecondsSinceEpoch}.tmp";
-            final testFile = File('$downloadDir/Gopeed/$fileRandomeName');
+            final testFile = File('$downloadDir/AsanDownload/$fileRandomeName');
             try {
               await testFile.create(recursive: true);
               await testFile.writeAsString('test');

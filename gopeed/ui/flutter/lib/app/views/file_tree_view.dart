@@ -4,16 +4,15 @@ import 'package:get/get.dart';
 import 'package:toggle_switch/toggle_switch.dart';
 
 import '../../api/model/resource.dart';
-import '../../icon/gopeed_icons.dart';
 import '../../util/util.dart';
 import 'file_icon.dart';
 import 'responsive_builder.dart';
 import 'sort_icon_button.dart';
 
 const _toggleSwitchIcons = [
-  Gopeed.file_video,
-  Gopeed.file_audio,
-  Gopeed.file_image,
+  Icons.video_file_outlined,
+  Icons.audio_file_outlined,
+  Icons.image_outlined,
 ];
 const _sizeGapWidth = 72.0;
 

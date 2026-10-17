@@ -108,8 +108,6 @@ const deDE = {
     'username': 'Benutzername',
     'password': 'Passwort',
     'thanks': 'Danke',
-    'thanksDesc':
-        'Vielen Dank an alle Mitwirkenden, die beim Aufbau und der Entwicklung der Gopeed-Community geholfen haben!',
     'browserExtension': 'Browsererweiterung',
     'launchAtStartup': 'Beim Start starten',
     'runAsMenubarApp': 'Als Menüleisten-App ausführen',

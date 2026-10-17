@@ -1,26 +1,47 @@
 package util
 
-import "time"
+import (
+	"sync"
+	"time"
+)
 
 type Timer struct {
-	t    int64
-	used int64
+	mu      sync.Mutex
+	started time.Time
+	used    time.Duration
+	now     func() time.Time
 }
 
 func NewTimer(used int64) *Timer {
-	return &Timer{
-		used: used,
+	if used < 0 {
+		used = 0
 	}
+	return &Timer{used: time.Duration(used), now: time.Now}
 }
 
 func (t *Timer) Start() {
-	t.t = time.Now().UnixNano()
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if t.started.IsZero() {
+		t.started = t.now()
+	}
 }
 
 func (t *Timer) Pause() {
-	t.used += time.Now().UnixNano() - t.t
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	if !t.started.IsZero() {
+		t.used += t.now().Sub(t.started)
+		t.started = time.Time{}
+	}
 }
 
 func (t *Timer) Used() int64 {
-	return (time.Now().UnixNano() - t.t) + t.used
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	used := t.used
+	if !t.started.IsZero() {
+		used += t.now().Sub(t.started)
+	}
+	return int64(used)
 }

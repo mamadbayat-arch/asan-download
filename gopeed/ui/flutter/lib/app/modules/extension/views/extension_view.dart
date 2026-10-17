@@ -83,6 +83,13 @@ class ExtensionView extends GetView<ExtensionController> {
                 vertical: 20,
               ),
               children: [
+                Card(child: Padding(padding: const EdgeInsets.all(16), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Text('browserExtension'.tr, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: 8), Text('browserExtensionHelp'.tr),
+                  const SizedBox(height: 8), TextButton.icon(icon: const Icon(Icons.open_in_browser_rounded), label: Text('browserExtensionGuide'.tr),
+                    onPressed: () => launchUrl(Uri.parse('https://downloader.hamtavar.ir/extension-guide-2.html'), mode: LaunchMode.externalApplication)),
+                ]))),
+                const SizedBox(height: 16),
                 _buildMarketToolbar(context),
                 const SizedBox(height: 12),
                 _buildFilterBar(context),
@@ -91,6 +98,11 @@ class ExtensionView extends GetView<ExtensionController> {
                   _buildInstallPanel(context),
                 ],
                 const SizedBox(height: 12),
+                if (controller.storeError.value.isNotEmpty && controller.listFilter.value == ExtensionListFilter.market)
+                  Padding(padding: const EdgeInsets.symmetric(vertical: 12), child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text(controller.storeError.value, style: Theme.of(context).textTheme.bodyMedium),
+                    TextButton.icon(onPressed: controller.loadingStore.value ? null : controller.refreshStore, icon: const Icon(Icons.refresh_rounded), label: Text('extensionRetry'.tr)),
+                  ])),
                 _buildUnifiedGrid(context),
                 if (controller.listFilter.value == ExtensionListFilter.market &&
                     controller.storePagination.value?.hasNext == true) ...[
@@ -376,7 +388,7 @@ class ExtensionView extends GetView<ExtensionController> {
         const SizedBox(width: 8),
         TextButton.icon(
           onPressed: () =>
-              launchUrl(Uri.parse('https://gopeed.com/docs/dev-extension')),
+              launchUrl(Uri.parse('https://downloader.hamtavar.ir/extension-development.html')),
           icon: const Icon(Icons.menu_book_outlined),
           label: Text('extensionDevelop'.tr),
         ),

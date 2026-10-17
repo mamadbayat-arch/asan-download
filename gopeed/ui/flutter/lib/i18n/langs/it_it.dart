@@ -98,8 +98,6 @@ const itIT = {
     'username': 'Nome utente',
     'password': 'Password',
     'thanks': 'Ringraziamenti',
-    'thanksDesc':
-        'Grazie a tutti i contributori che hanno contribuito a costruire e sviluppare la comunità Gopeed!',
     'browserExtension': 'Estensione del browser',
     'launchAtStartup': "Lancia all'avvio",
     'runAsMenubarApp': 'Esegui come app della barra dei menu',

@@ -102,8 +102,6 @@ const idID = {
     'username': 'Nama Pengguna',
     'password': 'Kata Sandi',
     'thanks': 'Terima Kasih',
-    'thanksDesc':
-        'Terima kasih kepada semua kontributor yang telah membantu membangun dan mengembangkan komunitas Gopeed!',
     'browserExtension': 'Ekstensi Perambanan',
     'launchAtStartup': 'Luncurkan saat Startup',
     'runAsMenubarApp': 'Jalankan sebagai aplikasi bilah menu',

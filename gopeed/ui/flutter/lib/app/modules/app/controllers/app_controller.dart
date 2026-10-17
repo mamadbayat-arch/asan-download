@@ -298,9 +298,9 @@ class AppController extends GetxController with WindowListener, TrayListener {
       ),
       MenuItem.separator(),
       MenuItem(
-        label: 'donate'.tr,
+        label: 'homepage'.tr,
         onClick: (menuItem) => {
-          launchUrl(Uri.parse("https://gopeed.com/docs/donate"),
+          launchUrl(Uri.parse("https://downloader.hamtavar.ir/asan-2.html"),
               mode: LaunchMode.externalApplication)
         },
       ),
@@ -409,7 +409,7 @@ class AppController extends GetxController with WindowListener, TrayListener {
     FlutterForegroundTask.init(
       androidNotificationOptions: AndroidNotificationOptions(
         channelId: 'gopeed_service',
-        channelName: 'Gopeed Background Service',
+        channelName: 'Asan Download Background Service',
         channelImportance: NotificationChannelImportance.LOW,
         showWhen: true,
         priority: NotificationPriority.LOW,

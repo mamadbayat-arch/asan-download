@@ -1,5 +1,5 @@
 name: gopeed
-description: Asan Download, a Persian download manager based on Gopeed.
+description: Asan Download, a Persian download manager.
 
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -15,7 +15,7 @@ publish_to: "none" # Remove this line if you wish to publish to pub.dev
 # In iOS, build-name is used as CFBundleShortVersionString while build-number used as CFBundleVersion.
 # Read more about iOS versioning at
 # https://developer.apple.com/library/archive/documentation/General/Reference/InfoPlistKeyReference/Articles/CoreFoundationKeys.html
-version: 2.0.1+1
+version: 2.0.2+1
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -143,9 +143,6 @@ flutter:
           weight: 400
         - asset: assets/fonts/Kalameh-Bold.ttf
           weight: 700
-    - family: Gopeed
-      fonts:
-        - asset: assets/fonts/Gopeed.ttf
   #   - family: Trajan Pro
   #     fonts:
   #       - asset: fonts/TrajanPro.ttf

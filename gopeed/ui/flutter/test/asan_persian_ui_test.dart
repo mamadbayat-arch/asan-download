@@ -1,3 +1,4 @@
+import 'dart:typed_data';
 import 'dart:io';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -26,6 +27,10 @@ void main() {
       ..addFont(rootBundle.load('assets/fonts/Kalameh-Regular.ttf'))
       ..addFont(rootBundle.load('assets/fonts/Kalameh-Bold.ttf'));
     await loader.load();
+    final material = FontLoader('MaterialIcons')
+      ..addFont(File('${Platform.environment['FLUTTER_ROOT']}/bin/cache/artifacts/material_fonts/MaterialIcons-Regular.otf')
+          .readAsBytes().then((bytes) => ByteData.sublistView(bytes)));
+    await material.load();
   });
   tearDown(() { Get.reset(); });
 
@@ -67,6 +72,9 @@ void main() {
             Expanded(child:ExtensionView()),
           ]))))],
         ));
+        await tester.runAsync(() async {
+          if(width>=768) await precacheImage(const AssetImage('assets/icon/asan-wordmark.png'), boundary.currentContext!);
+        });
         await tester.pumpAndSettle();
         expect(tester.takeException(), isNull);
         expect(find.text('همهٔ افزونه‌ها'), findsOneWidget);
