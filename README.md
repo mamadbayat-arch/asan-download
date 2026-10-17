@@ -1,6 +1,30 @@
-> **نسخهٔ جدید بر پایه Gopeed:** سورس در `gopeed/` و راهنمای ساخت ویندوز در [GOPEED-FORK.md](GOPEED-FORK.md) است. با `BuildGopeed.ps1` ساخته می‌شود. توضیحات زیر مربوط به نسخهٔ قبلی C# هستند.
-
 # آسان دانلود · Asan Download
+
+نسخهٔ جدید: **۲.۰.۲**، برای ویندوز ۱۰ و ۱۱ (۶۴ بیت)، با رابط فارسی و فونت کلمه.
+
+- [دریافت برنامه و افزونه](https://downloader.hamtavar.ir/asan-2.html)
+- [راهنمای اتصال Chrome و Edge](https://downloader.hamtavar.ir/extension-guide-2.html)
+- [تغییرات نسخهٔ ۲.۰.۲](RELEASE-2.0.2.md)
+
+## ساخت نسخهٔ ۲
+
+سورس برنامهٔ جدید در پوشهٔ `gopeed/` است. به Go 1.24.11، Flutter 3.41.2، ابزار C++ ویژوال استودیو و MinGW نیاز دارد:
+
+```powershell
+./BuildGopeed.ps1
+```
+
+بسته شامل Install.cmd و پوشهٔ BrowserExtension با افزونهٔ ۱.۸.۲ است. برنامه وجود نسخهٔ جدید را از سایت آسان دانلود بررسی می‌کند؛ نصب این پیش‌نمایش با انتخاب کاربر انجام می‌شود. کانال آپدیت امضاشدهٔ نسخهٔ ۱ با نسخهٔ ۲ مشترک نیست.
+
+آزمون‌ها: صحت بایت‌های دانلود، میزبان مرورگر، تأیید و انصراف، خطا و برگشت به مرورگر، باقی‌ماندن سابقه پس از راه‌اندازی دوباره، لینک‌های قدیمی هنگام شروع، و رابط فارسی در پوسته‌های روشن و تیره.
+
+## مجوزها و منشأ سورس
+
+نسخهٔ ۲ یک توزیع اصلاح‌شده از Gopeed 1.9.3 تحت GPL-3.0 است. [اطلاعیهٔ حقوق سازندگان](gopeed/ASAN-NOTICE.md)، [مجوز](gopeed/LICENSE) و [سورس متناظر نسخهٔ منتشرشده](https://downloader.hamtavar.ir/licenses.html) در دسترس‌اند. نام‌های داخلی ماژول‌ها و مسیر اطلاعات برای سازگاری نگه داشته شده‌اند؛ اطلاعات دانلودها جابه‌جا نمی‌شود. دارایی‌های برند و فونت، حقوق خود را دارند.
+
+---
+
+## نسخهٔ قدیمی ۱.۸.۲
 
 Persian Windows download manager with a browser extension and a small self-hosted website/admin service.
 
@@ -8,7 +32,7 @@ Persian Windows download manager with a browser extension and a small self-hoste
 - Chrome and Microsoft Edge extension: **1.7.1**, Manifest V3.
 - Website: https://downloader.hamtavar.ir/
 
-## Features
+### Features
 
 - Up to 16 download connections, adaptive chunk scheduling, retries, pause and resume.
 - One default download folder, automatic filenames and collision-safe destinations.
@@ -18,7 +42,7 @@ Persian Windows download manager with a browser extension and a small self-hoste
 - Light/dark interface, embedded Kalameh fonts and Hamtavar branding.
 - Windows startup option, browser native messaging, signed automatic updates, centrally managed advertisements and issue reporting.
 
-## Build and run
+### Build and run
 
 Use Windows 10/11 with .NET Framework 4.8, PowerShell and Node.js 22 or later. The build uses the C# compiler included with Windows and does not require Visual Studio.
 
@@ -33,7 +57,7 @@ In Chrome/Edge, enable Developer mode on the extensions page and choose **Load u
 
 Downloads requiring browser cookies or login, streaming media and webpage URLs are not supported as direct downloads. Download speed remains subject to the network and source server. Resume requires compatible server range/validator support.
 
-## Tests
+### Tests
 
 ```powershell
 ./Test.ps1
@@ -46,7 +70,7 @@ These cover download integrity, pause/resume, history persistence and recovery, 
 
 `AdaptiveTests.cs` and `AdaptiveServer.mjs` provide the controlled slow-connection scheduling benchmark. `NativeSmoke.mjs ping` checks the installed native host without starting a download.
 
-## Website and administration
+### Website and administration
 
 ```powershell
 cd server
@@ -58,7 +82,7 @@ npm start
 
 The default port is 4080. Set `PUBLIC_ORIGIN` to the deployed HTTPS origin. Admin pages are `/admin` and `/admin/reports`; runtime data is stored in `server/data` unless `DATA_DIR` is configured. Supply secrets through the environment; do not commit them.
 
-## Release builds
+### Release builds
 
 `BuildRelease.ps1` creates the Windows bundle, extension ZIP, update executable and signed release manifest. It requires the existing private publisher key `UPDATE-SIGNING-KEY.xml`, which is intentionally excluded from Git. `Assets/UpdatePublicKey.xml` is the public verification key used by installed clients. Keep the matching private key in secure backup; a new key will not sign updates accepted by existing clients.
 
@@ -68,7 +92,7 @@ The default port is 4080. Set `PUBLIC_ORIGIN` to the deployed HTTPS origin. Admi
 
 Release files are generated in `server/public/downloads` and the manifest in `server/public/release.json`. Generated executables, archives, signing secrets, credentials, local histories and test output are excluded from the repository.
 
-## Source layout
+### Source layout
 
 | Path | Purpose |
 | --- | --- |

@@ -26,6 +26,8 @@ jobs:
           cache: true
       - name: Browser startup regression
         run: node gopeed/browser-extension/test-background.mjs
+      - name: Browser connection popup
+        run: node gopeed/tools/test-popup.mjs
       - name: Build and test Asan Download
         shell: pwsh
         env:
