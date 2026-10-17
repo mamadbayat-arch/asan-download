@@ -72,6 +72,7 @@ void main() {
             Expanded(child:ExtensionView()),
           ]))))],
         ));
+        await tester.pumpAndSettle();
         await tester.runAsync(() async {
           if(width>=768) await precacheImage(const AssetImage('assets/icon/asan-wordmark.png'), boundary.currentContext!);
         });
