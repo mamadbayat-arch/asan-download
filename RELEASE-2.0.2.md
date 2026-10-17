@@ -14,3 +14,7 @@ User-facing branding is Asan Download throughout the Windows app, browser extens
 Validation: browser startup/confirmation/fallback regressions; race-enabled Go host and timer tests; Flutter Persian typography, translations, responsive light/dark layouts, history, statistics, confirmation and release/catalogue regression tests; packaged Windows end-to-end download with byte hash, host ping, resolve error, restart persistence, missing file history and stale startup links.
 
 Known limits: browser cookies are not forwarded; authenticated downloads may need the browser. Browser bundle supports Chrome and Edge. No guarantee of speeds beyond the user's connection or origin-server limits. Native Windows screenshots from widget tests cover responsive layout; they are not full desktop interaction tests.
+
+Published on 2026-10-17 at https://downloader.hamtavar.ir/asan-2.html . Tested application/source commit: `ea3bda169ed252f5d6958cbbe7d94026875c193b`; successful Windows build and native smoke: GitHub Actions run `39017248530`. Public HTTPS downloads of the Windows bundle, extension and corresponding source were checked against their published SHA-256 values. All three matched. Earlier source archives remain linked from the licenses page.
+
+Published Windows ZIP SHA-256: `2ce337bab3ae8c1ef26693114847bce3acab726c2b7f2333558593e368199879`.
