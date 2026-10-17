@@ -3,6 +3,7 @@ package util
 import (
 	"fmt"
 	"os"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -250,6 +251,7 @@ func TestSafeFilename(t *testing.T) {
 		name     string
 		filename string
 		want     string
+		wantWindows string
 	}{
 		{
 			name:     "short filename - no changes needed",
@@ -275,6 +277,7 @@ func TestSafeFilename(t *testing.T) {
 			name:     "both invalid chars and too long",
 			filename: "path/to/very:long*filename?that<exceeds>filesystem|limits_and_has_invalid_characters_everywhere.pdf",
 			want:     "path_to_very_long*filename?that<exceeds>filesystem|limits_and_has_invalid_characters_everywhere.pdf",
+			wantWindows: "path_to_very_long_filename_that_exceeds_filesystem_limits_and_has_invalid_characters_everywhere.pdf",
 		},
 		{
 			name:     "unicode with invalid chars and truncation",
@@ -306,9 +309,13 @@ func TestSafeFilename(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			got := SafeFilename(tt.filename)
-			if got != tt.want {
+			want := tt.want
+			if runtime.GOOS == "windows" && tt.wantWindows != "" {
+				want = tt.wantWindows
+			}
+			if got != want {
 				t.Errorf("SafeFilename() = %q (len=%d), want %q (len=%d)",
-					got, len(got), tt.want, len(tt.want))
+					got, len(got), want, len(want))
 			}
 			// Verify result doesn't exceed MaxFilenameLength
 			if len(got) > MaxFilenameLength {

@@ -122,7 +122,7 @@ class ExtensionController extends GetxController {
     try {
       installedExtensions.value = await getExtensions();
       if (refreshUpdates) {
-        await checkUpdate();
+        _backgroundCheckUpdate();
       }
     } finally {
       loadingInstalled.value = false;

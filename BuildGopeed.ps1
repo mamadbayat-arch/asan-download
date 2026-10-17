@@ -6,7 +6,7 @@ Push-Location -LiteralPath $taskSource
 try {
  foreach($taskTool in @('go','flutter')){if(!(Get-Command $taskTool -ErrorAction SilentlyContinue)){throw "$taskTool is required. See GOPEED-FORK.md."}}
  $env:CGO_ENABLED='1'
- if(!$SkipTests){& go test -race ./cmd/asanhost ./pkg/util; if($LASTEXITCODE -ne 0){throw 'Browser host tests failed'}}
+ if(!$SkipTests){& go test -race ./cmd/asanhost ./pkg/util; if($LASTEXITCODE -ne 0){throw 'Browser host or utility tests failed'}}
  & go build -tags nosqlite -ldflags "-w -s -X github.com/GopeedLab/gopeed/pkg/base.Version=$Version" -buildmode=c-shared -o ui/flutter/windows/asan_engine.dll ./bind/desktop
  if($LASTEXITCODE -ne 0){throw 'Go engine build failed'}
  New-Item -ItemType Directory -Path ui/flutter/assets/exec -Force|Out-Null
