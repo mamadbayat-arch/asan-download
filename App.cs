@@ -10,8 +10,8 @@ using System.Collections.Generic;
 using Microsoft.Win32;
 using System.Globalization;
 
-[assembly: System.Reflection.AssemblyVersion("1.8.2.0")]
-[assembly: System.Reflection.AssemblyFileVersion("1.8.2.0")]
+[assembly: System.Reflection.AssemblyVersion("1.8.3.0")]
+[assembly: System.Reflection.AssemblyFileVersion("1.8.3.0")]
 namespace MehrDownload {
  class CompletedFile {
   public string Id,Path;public long Size;public DateTime Finished;

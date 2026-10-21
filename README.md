@@ -2,7 +2,7 @@
 
 Persian Windows download manager with a browser extension and a small self-hosted website/admin service.
 
-- Desktop app: **1.8.2**, C# / Windows Forms / .NET Framework.
+- Desktop app: **1.8.3**, C# / Windows Forms / .NET Framework.
 - Chrome and Microsoft Edge extension: **1.7.1**, Manifest V3.
 - Website: https://downloader.hamtavar.ir/
 
@@ -81,6 +81,8 @@ The default port is 4080. Set `PUBLIC_ORIGIN` to the deployed HTTPS origin. Admi
 ```powershell
 ./BuildRelease.ps1
 ```
+
+Use `./BuildRelease.ps1 -SigningKeyPath <private-key-path>` when the original publisher key is stored outside the checkout. To build a standalone manual installer without publishing or changing the signed automatic-update channel, use `./BuildRelease.ps1 -PackageOnly`. These standalone packages are written under `server/public/downloads/<version>/` and do not include a new update manifest.
 
 Release files are generated in `server/public/downloads` and the manifest in `server/public/release.json`. Generated executables, archives, signing secrets, credentials, local histories and test output are excluded from the repository.
 
