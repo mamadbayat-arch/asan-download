@@ -53,12 +53,14 @@ function cookie(value, age) { return `asan_session=${value}; Path=/; HttpOnly; S
 function validateAd(input) {
  const text = (key, max) => { if (typeof input[key] !== 'string' || input[key].length > max) throw bad(400, 'متن بنر معتبر نیست.'); return input[key].trim(); };
  const title = text('title', 100), description = text('description', 240), ctaText = text('ctaText', 40), link = text('link', 2048), imageUrl = text('imageUrl', 200);
+ const optional = (key, max) => { const value = input[key]; if (value === undefined || value === null || value === '') return ''; if (typeof value !== 'string' || value.length > max) throw bad(400, 'متن بنر معتبر نیست.'); return value.trim(); };
+ const titleEn = optional('titleEn', 100), descriptionEn = optional('descriptionEn', 240), ctaTextEn = optional('ctaTextEn', 40);
  let url; try { url = new URL(link); } catch { throw bad(400, 'لینک مقصد معتبر نیست.'); }
  if (!['https:', 'http:'].includes(url.protocol) || url.username || url.password) throw bad(400, 'لینک مقصد باید HTTP یا HTTPS باشد.');
  if (imageUrl !== '/assets/hamtavar.png' && !/^\/media\/[a-f0-9]{32}\.(png|jpg|webp)$/.test(imageUrl)) throw bad(400, 'تصویر را از پنل بارگذاری کنید.');
  if (imageUrl.startsWith('/media/') && !fs.existsSync(path.join(dataDir, imageUrl.slice(1)))) throw bad(400, 'تصویر پیدا نشد.');
  if (typeof input.active !== 'boolean' || !title || !ctaText) throw bad(400, 'عنوان و متن دکمه لازم است.');
- return { active: input.active, title, description, ctaText, link, imageUrl, revision: readAd().revision + 1, updatedAt: new Date().toISOString() };
+ return { active: input.active, title, description, ctaText, link, imageUrl, titleEn, descriptionEn, ctaTextEn, revision: readAd().revision + 1, updatedAt: new Date().toISOString() };
 }
 function serve(req, res, file, download = false) {
  if (!fs.existsSync(file) || !fs.statSync(file).isFile()) return json(res, 404, { error: 'فایل پیدا نشد.' });

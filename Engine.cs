@@ -27,6 +27,7 @@ namespace MehrDownload {
   public long SessionReceived;
   public int ActiveConnections;
   public volatile bool Running;
+  public volatile bool Paused;
   public string Error;
   CancellationTokenSource cancel;
   readonly object gate = new object();
@@ -62,7 +63,7 @@ namespace MehrDownload {
   }
   public Task Run(string url, string target, int connections) {
    if(Running) throw new InvalidOperationException("دانلود در حال اجراست");
-   Running=true;Error=null;State=null;Received=0;SessionReceived=0;ActiveConnections=0;cancel=new CancellationTokenSource();
+   Running=true;Error=null;Paused=false;State=null;Received=0;SessionReceived=0;ActiveConnections=0;cancel=new CancellationTokenSource();
    var sessionClock=Stopwatch.StartNew();
    return Task.Run(() => {
     FileStream lease=null;
@@ -126,7 +127,7 @@ namespace MehrDownload {
      Directory.Delete(Parts,true);
      Status="دانلود کامل شد";
     } catch(Exception ex) {
-     if(cancel.IsCancellationRequested && Error==null) Status="متوقف شد؛ آمادهٔ ادامه";
+     if(cancel.IsCancellationRequested && Error==null){Paused=true;Status="متوقف شد؛ آمادهٔ ادامه";}
      else { Error=ex.GetBaseException().Message; Status="دانلود ناموفق؛ امکان تلاش دوباره"; }
     } finally {
      sessionClock.Stop();

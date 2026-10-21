@@ -13,7 +13,7 @@ using System.Web.Script.Serialization;
 
 namespace MehrDownload {
  static class ReleaseInfo {
-  public const string Version="1.8.0";
+  public static readonly string Version=typeof(ReleaseInfo).Assembly.GetName().Version.ToString(3);
   public static string InstalledPath {get{return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Programs","MehrDownload","MehrDownload.exe");}}
   public static string CachePath {get{return Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MehrDownload","updates");}}
  }
@@ -79,11 +79,20 @@ namespace MehrDownload {
   public StartupUpdate():this(new[]{AdPlacement.Origin,AdPlacement.LegacyOrigin}){}
   internal StartupUpdate(string[] addresses){
    origins=addresses;
-   Text="به‌روزرسانی آسان دانلود";ClientSize=new Size(470,250);MinimumSize=MaximumSize=Size;StartPosition=FormStartPosition.CenterScreen;
-   var body=new TableLayoutPanel{Dock=DockStyle.Fill,Padding=new Padding(24,12,24,20),ColumnCount=1,RowCount=4};body.RowStyles.Add(new RowStyle(SizeType.Absolute,38));body.RowStyles.Add(new RowStyle(SizeType.Absolute,40));body.RowStyles.Add(new RowStyle(SizeType.Absolute,22));body.RowStyles.Add(new RowStyle(SizeType.Percent,100));Controls.Add(body);
-   var heading=new Label{Text="همیشه نسخهٔ تازه",Font=Brand.Font(18,FontStyle.Bold),Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleCenter,BackColor=Color.Transparent};body.Controls.Add(heading,0,0);
-   message.Text="در حال بررسی نسخهٔ جدید…";message.Font=Brand.Font(11);message.Dock=DockStyle.Fill;message.TextAlign=ContentAlignment.MiddleCenter;message.BackColor=Color.Transparent;body.Controls.Add(message,0,1);
-   progress.Dock=DockStyle.Fill;progress.Maximum=1000;body.Controls.Add(progress,0,2);proceed.Text="ورود به برنامه";proceed.Font=Brand.Font(11);proceed.Dock=DockStyle.Right;proceed.Width=140;body.Controls.Add(proceed,0,3);proceed.Click+=(s,e)=>{proceedRequested=true;cancellation.Cancel();Close();};
+   Text=Lang.T("update.title");ClientSize=new Size(500,300);MinimumSize=MaximumSize=Size;StartPosition=FormStartPosition.CenterScreen;Font=Brand.Font(11);RightToLeft=Lang.Rtl?RightToLeft.Yes:RightToLeft.No;
+   var body=new SmoothTableLayout{Dock=DockStyle.Fill,Padding=new Padding(28,16,28,22),ColumnCount=1,RowCount=5};
+   body.RowStyles.Add(new RowStyle(SizeType.Absolute,58));body.RowStyles.Add(new RowStyle(SizeType.Absolute,44));body.RowStyles.Add(new RowStyle(SizeType.Absolute,12));body.RowStyles.Add(new RowStyle(SizeType.Absolute,20));body.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+   Controls.Add(body);
+   var head=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=2,RowCount=1,Margin=Padding.Empty};
+   head.RowStyles.Add(new RowStyle(SizeType.Percent,100));head.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,52));head.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+   head.Controls.Add(new LogoView{Dock=DockStyle.Fill,Margin=new Padding(0,0,10,0)},0,0);
+   var heading=new Label{Text=Lang.T("update.heading"),Font=Brand.Font(16,FontStyle.Bold),Dock=DockStyle.Fill,TextAlign=Lang.Rtl?ContentAlignment.MiddleRight:ContentAlignment.MiddleLeft,BackColor=Color.Transparent,AutoSize=false};
+   head.Controls.Add(heading,1,0);
+   body.Controls.Add(head,0,0);
+   message.Text=Lang.T("update.checking");message.Font=Brand.Font(10.5f);message.Dock=DockStyle.Fill;message.TextAlign=Lang.Rtl?ContentAlignment.MiddleRight:ContentAlignment.MiddleLeft;message.BackColor=Color.Transparent;message.AutoSize=false;body.Controls.Add(message,0,1);
+   var bar=new GlassPanel{Dock=DockStyle.Fill,Radius=12,Padding=new Padding(10),Margin=Padding.Empty};
+   progress.Dock=DockStyle.Fill;progress.Maximum=1000;bar.Controls.Add(progress);body.Controls.Add(bar,0,3);
+   proceed.Text=Lang.T("update.enter");proceed.Font=Brand.Font(11);proceed.Dock=DockStyle.Right;proceed.Width=150;body.Controls.Add(proceed,0,4);proceed.Click+=(s,e)=>{proceedRequested=true;cancellation.Cancel();Close();};
    Shown+=async(s,e)=>await Run();FormClosing+=(s,e)=>{if(!finished){ExitRequested=!proceedRequested;cancellation.Cancel();}};
   }
   async Task Run(){
@@ -95,11 +104,11 @@ namespace MehrDownload {
      cancellation.Token.ThrowIfCancellationRequested();try{var origin=new Uri(address);release=await Task.Run(()=>client.Check(origin,cancellation.Token));selected=origin;break;}catch{if(cancellation.IsCancellationRequested)throw;}
     }
     if(release==null)return;
-    if(IsDisposed)return;message.Text="نسخهٔ "+release.version+" در حال دریافت است…";cancellation.CancelAfter(30000);
+    if(IsDisposed)return;message.Text=Lang.T("update.downloading")+release.version+" "+Lang.T("update.receiving");cancellation.CancelAfter(30000);
     var report=new Progress<int>(value=>{if(!IsDisposed)progress.Value=Math.Max(0,Math.Min(1000,value));});
     file=await Task.Run(()=>client.Download(selected,release,ReleaseInfo.CachePath,cancellation.Token,(done,total)=>((IProgress<int>)report).Report((int)Math.Min(1000,done*1000/release.exeSize))));
     cancellation.Token.ThrowIfCancellationRequested();if(IsDisposed)return;
-    message.Text="در حال نصب نسخهٔ تازه…";proceed.Enabled=false;
+    message.Text=Lang.T("update.installing");proceed.Enabled=false;
     // Keep a read lock until the trusted helper has started, preventing replacement of the verified file.
     using(var held=File.Open(file,FileMode.Open,FileAccess.Read,FileShare.Read)){
      string arguments="--apply-update "+Process.GetCurrentProcess().Id+" "+release.version+" "+release.sha256+" "+release.exeSize+" "+release.signature+" "+release.updateUrl;

@@ -16,8 +16,10 @@ namespace MehrDownload {
  class CompletedFile {
   public string Id,Path;public long Size;public DateTime Finished;
   public double? DurationSeconds,AverageBytesPerSecond;
-  public static string PersianDigits(string value){for(int n=0;n<10;n++)value=value.Replace((char)('0'+n),(char)('۰'+n));return value;}
-  public string PersianDate(){if(Finished==DateTime.MinValue)return "—";var date=Finished.Kind==DateTimeKind.Utc?Finished.ToLocalTime():Finished;var calendar=new PersianCalendar();return PersianDigits(String.Format(CultureInfo.InvariantCulture,"{0:0000}/{1:00}/{2:00} {3:00}:{4:00}",calendar.GetYear(date),calendar.GetMonth(date),calendar.GetDayOfMonth(date),date.Hour,date.Minute));}
+  public static string PersianDigits(string value){if(Lang.English)return value;for(int n=0;n<10;n++)value=value.Replace((char)('0'+n),(char)('۰'+n));return value;}
+  public string PersianDate(){if(Finished==DateTime.MinValue)return "—";var date=Finished.Kind==DateTimeKind.Utc?Finished.ToLocalTime():Finished;
+   if(Lang.English)return date.ToString("yyyy/MM/dd HH:mm",CultureInfo.InvariantCulture);
+   var calendar=new PersianCalendar();return PersianDigits(String.Format(CultureInfo.InvariantCulture,"{0:0000}/{1:00}/{2:00} {3:00}:{4:00}",calendar.GetYear(date),calendar.GetMonth(date),calendar.GetDayOfMonth(date),date.Hour,date.Minute));}
   public string Duration(){if(!DurationSeconds.HasValue)return "—";long seconds=(long)Math.Ceiling(Math.Max(0,DurationSeconds.Value));return PersianDigits(String.Format(CultureInfo.InvariantCulture,"{0:00}:{1:00}:{2:00}",seconds/3600,(seconds/60)%60,seconds%60));}
   public string Average(bool bits){return AverageBytesPerSecond.HasValue?PersianDigits((AverageBytesPerSecond.Value*(bits?8:1)/1000000d).ToString("0.00",CultureInfo.InvariantCulture))+(bits?" Mb/s":" MB/s"):"—";}
  }
@@ -25,6 +27,8 @@ namespace MehrDownload {
   public string Url,Target,Folder;
   public int Connections=8;
   public bool SpeedInBits;
+  public bool English;
+  public bool Dark,SidebarCollapsed;
   public List<CompletedFile> History=new List<CompletedFile>();
   public List<string> Queue=new List<string>();
   public static Saved Load(string path) {
@@ -49,19 +53,23 @@ namespace MehrDownload {
    var file=new CompletedFile {Id=Guid.NewGuid().ToString("N"),Path=path,Size=new FileInfo(path).Length,Finished=DateTime.Now};if(metrics!=null&&metrics.HasTiming&&metrics.ActiveSeconds>0){file.DurationSeconds=metrics.ActiveSeconds;file.AverageBytesPerSecond=file.Size/metrics.ActiveSeconds;}History.Insert(0,file);
   }
  }
+
  class Window : GlassForm {
   TextBox link=new TextBox(), destination=new TextBox();
   GlassButton linkSummary;
-  TableLayoutPanel downloadLayout;
   TableLayoutPanel contentLayout;
-  Control locationRow;
-  Label fileSummary;
+  TableLayoutPanel shellLayout;
+  TableLayoutPanel bodyLayout;
+
+  Label emptyHint;
   ToolTip hints=new ToolTip();
-  NumericUpDown connections=new NumericUpDown();
-  GlassButton start, pause, browse, folder, theme, paste;
-  ListView history=new ListView();
+  ConnectionStepper connections=new ConnectionStepper();
+  GlassButton start, pause, paste, addButton, batchButton, sortButton, filterButton, toggleSidebar;
+  NavItem folder, theme;
+  DownloadTable history=new DownloadTable();
   Saved saved=new Saved();
-  Label status, speed, detail, count, total,emptyHint;
+  Label status;
+  StatTile speed, count, total;
   GlassProgress progress=new GlassProgress();
   DownloadEngine engine=new DownloadEngine();
   Timer timer=new Timer();
@@ -71,189 +79,747 @@ namespace MehrDownload {
   internal bool LastDownloadDeclined;
   string currentUrl,currentTarget; int currentConnections; bool closing, dark;
   string settings=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"MehrDownload","session.json");
+
+  string filter="all", searchTerm="";
+  readonly List<KeyValuePair<Control,string>> localized=new List<KeyValuePair<Control,string>>();
+  readonly List<Label> alignedLabels=new List<Label>();
+  NavItem languageItem;
+  readonly List<NavItem> navItems=new List<NavItem>();
+  List<DownloadItem> tableItems=new List<DownloadItem>();
+  DownloadItem activeItem;
+  DownloadTable tableHost;
+  Panel sidebarHost;
+  AdPlacement ad;
+  StatusStrip statusStrip;
+  SearchField searchField;
+  DropZone dropZone;
+  TableLayoutPanel composer;
+  bool sidebarCollapsed;
+  ColumnAnimator columnAnimator;
+  TableLayoutPanel toolbarRow,composerRow;
+  Panel sidebarScroll;
+  Label sidebarBrand;
+  bool compactLayout,updatingLayout;
+  string settingsError;
+
   public Window(bool restore) : this(restore,null) {}
   internal Window(bool restore,string settingsPath) {
    if(settingsPath!=null)settings=settingsPath;
-   Text="آسان دانلود";var screen=Screen.PrimaryScreen.WorkingArea;ClientSize=new Size(Math.Min(1100,screen.Width-24),Math.Min(900,screen.Height-24));MinimumSize=new Size(Math.Min(1000,screen.Width-24),Math.Min(870,screen.Height-24));
-   StartPosition=FormStartPosition.CenterScreen;Font=Brand.Font(12);AutoScaleMode=AutoScaleMode.Dpi;
-   RightToLeft=RightToLeft.Yes;RightToLeftLayout=false;
+   if(restore)try{saved=Saved.Load(settings);Lang.English=saved.English;}catch{settingsError=Lang.T("error.settings");}
+   Text=Lang.T("app.name");var screen=Screen.PrimaryScreen.WorkingArea;
+   ClientSize=new Size(Math.Min(1280,screen.Width-24),Math.Min(940,screen.Height-24));
+   MinimumSize=new Size(Math.Min(960,screen.Width-24),Math.Min(640,screen.Height-24));
+   StartPosition=FormStartPosition.CenterScreen;Font=Brand.Font(11);AutoScaleMode=AutoScaleMode.Dpi;
+   RightToLeft=Lang.Rtl?RightToLeft.Yes:RightToLeft.No;RightToLeftLayout=false;
    using(var stream=System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("Download.ico"))Icon=new Icon(stream);
-   var shell=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=2,Padding=new Padding(18),Margin=Padding.Empty};
-   shell.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,220));shell.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));Controls.Add(shell);
-   var sidebar=new GlassPanel{Dock=DockStyle.Fill,Padding=new Padding(16),Margin=new Padding(0,0,12,0)};
-   shell.Controls.Add(sidebar,0,0);
-   var navigation=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=1,RowCount=9,Margin=Padding.Empty};
-   foreach(int h in new[]{86,48,48,48,48,48})navigation.RowStyles.Add(new RowStyle(SizeType.Absolute,h));
-   navigation.RowStyles.Add(new RowStyle(SizeType.Percent,100));navigation.RowStyles.Add(new RowStyle(SizeType.Absolute,48));navigation.RowStyles.Add(new RowStyle(SizeType.Absolute,64));sidebar.Controls.Add(navigation);
-   var identity=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=2,RowCount=1};identity.RowStyles.Add(new RowStyle(SizeType.Percent,100));identity.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,56));identity.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));identity.Controls.Add(new LogoView{Dock=DockStyle.Fill,Margin=new Padding(0,12,0,12)},0,0);identity.Controls.Add(new Label{Text="آسان دانلود",Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleCenter,Font=Brand.Font(9,FontStyle.Bold),BackColor=Color.Transparent},1,0);navigation.Controls.Add(identity,0,0);
-   var home=Button("دانلود جدید");home.Dock=DockStyle.Fill;navigation.Controls.Add(home,0,1);home.Click+=(s,e)=>{if(!engine.Running)EditLink();};
-   var completed=Button("فایل‌های دریافت‌شده");completed.Dock=DockStyle.Fill;navigation.Controls.Add(completed,0,2);completed.Click+=(s,e)=>history.Focus();
-   folder=Button("پوشهٔ دانلودها");folder.Dock=DockStyle.Fill;navigation.Controls.Add(folder,0,3);
-   folder.Click+=(s,e)=>{try{if(!String.IsNullOrEmpty(saved.Folder)&&Directory.Exists(saved.Folder))Process.Start("explorer.exe","\""+saved.Folder+"\"");else ChooseFolder();}catch(Exception ex){MessageBox.Show(ex.Message,Text);}};
-   var settingsButton=Button("تنظیم پوشه");settingsButton.Dock=DockStyle.Fill;navigation.Controls.Add(settingsButton,0,4);settingsButton.Click+=(s,e)=>{if(!engine.Running)ChooseFolder();};
-   var reportButton=Button("گزارش مشکل");reportButton.Dock=DockStyle.Fill;navigation.Controls.Add(reportButton,0,5);reportButton.Click+=(s,e)=>{using(var report=new ReportDialog())report.ShowDialog(this);};
-   theme=Button("تیره / روشن");theme.Dock=DockStyle.Fill;navigation.Controls.Add(theme,0,7);theme.Click+=(s,e)=>{SuspendLayout();try{dark=!dark;PaintTheme(this);}finally{ResumeLayout(false);}Invalidate(true);};
-   var integrationButton=Button("ویندوز و مرورگر");integrationButton.Dock=DockStyle.Fill;navigation.Controls.Add(integrationButton,0,8);integrationButton.Click+=(s,e)=>IntegrationSettings();
-   var content=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=1,RowCount=6,Padding=new Padding(12,0,0,0),Margin=Padding.Empty};
-   contentLayout=content;
-   foreach(int h in new[]{70,104,342,16})content.RowStyles.Add(new RowStyle(SizeType.Absolute,h));content.RowStyles.Add(new RowStyle(SizeType.Percent,100));content.RowStyles.Add(new RowStyle(SizeType.Absolute,84));shell.Controls.Add(content,1,0);
-   var header=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=2,RowCount=1};header.RowStyles.Add(new RowStyle(SizeType.Percent,100));header.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));header.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,110));
-   var titles=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=1,RowCount=2};titles.RowStyles.Add(new RowStyle(SizeType.Absolute,40));titles.RowStyles.Add(new RowStyle(SizeType.Percent,100));var heading=Label("همهٔ دانلودها، یک‌جا");heading.Font=Brand.Font(19,FontStyle.Bold);heading.TextAlign=ContentAlignment.MiddleLeft;titles.Controls.Add(heading,0,0);var subheading=Label("لینک را وارد کنید؛ بقیه‌اش با آسان دانلود.");subheading.TextAlign=ContentAlignment.MiddleLeft;subheading.Font=Brand.Font(10);titles.Controls.Add(subheading,0,1);header.Controls.Add(titles,0,0);
-   var badge=Label("آمادهٔ دریافت");badge.TextAlign=ContentAlignment.MiddleCenter;header.Controls.Add(badge,1,0);content.Controls.Add(header,0,0);
-   var stats=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=3,RowCount=1,Margin=new Padding(0,8,0,14)};stats.RowStyles.Add(new RowStyle(SizeType.Percent,100));
-   for(int i=0;i<3;i++)stats.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,33.333f));
-   speed=Stat(stats,"سرعت دریافت","0 MB/s",0,Color.FromArgb(233,248,247));speed.RightToLeft=RightToLeft.No;
-   ConfigureSpeedToggle(speed.Parent.Parent);
-   count=Stat(stats,"فایل‌های کامل‌شده","۰",1,Color.FromArgb(243,235,253));
-   total=Stat(stats,"حجم دریافت‌شده","0 MB",2,Color.FromArgb(255,241,234));total.RightToLeft=RightToLeft.No;content.Controls.Add(stats,0,1);
-   var downloadPanel=new GlassPanel{Dock=DockStyle.Fill,Padding=new Padding(20),Margin=Padding.Empty};content.Controls.Add(downloadPanel,0,2);
-   var layout=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=1,RowCount=9,Margin=Padding.Empty};
-   downloadLayout=layout;
-   foreach(int h in new[]{24,50,24,50,60,20,32,30})layout.RowStyles.Add(new RowStyle(SizeType.Absolute,h));downloadPanel.Controls.Add(layout);
-   layout.Controls.Add(Label("لینک مستقیم فایل"),0,0);
-   var linkRow=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=2,RowCount=1,Margin=Padding.Empty};linkRow.RowStyles.Add(new RowStyle(SizeType.Percent,100));linkRow.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));linkRow.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,132));
-   link.RightToLeft=RightToLeft.No;link.Font=Brand.Font(12);link.AccessibleName="لینک دانلود";
-   linkSummary=new GlassButton{Dock=DockStyle.Fill,Text="افزودن لینک دانلود…",RightToLeft=RightToLeft.No,Margin=new Padding(0,2,6,4),AccessibleName="نمایش و ویرایش لینک کامل"};linkRow.Controls.Add(linkSummary,0,0);linkSummary.Click+=(s,e)=>EditLink();
-   paste=Button("چسباندن لینک");paste.Dock=DockStyle.Fill;linkRow.Controls.Add(paste,1,0);layout.Controls.Add(linkRow,0,1);
-   paste.Click+=(s,e)=>{try{if(Clipboard.ContainsText()){link.Text=Clipboard.GetText().Trim();linkSummary.Focus();}else MessageBox.Show("کلیپ‌بورد متنی ندارد.",Text);}catch(Exception ex){MessageBox.Show(ex.Message,Text);}};
-   link.TextChanged+=(s,e)=>UpdateTarget();
-   fileSummary=Label("ابتدا پوشهٔ دانلود را انتخاب کنید");layout.Controls.Add(fileSummary,0,2);
-   var location=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=2,RowCount=1,Margin=Padding.Empty};location.RowStyles.Add(new RowStyle(SizeType.Percent,100));location.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));location.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,132));
-   destination.ReadOnly=true;destination.RightToLeft=RightToLeft.No;destination.AccessibleName="مسیر فایل";location.Controls.Add(Input(destination),0,0);
-   browse=Button("انتخاب پوشه");browse.Dock=DockStyle.Fill;location.Controls.Add(browse,1,0);layout.Controls.Add(location,0,3);browse.Click+=(s,e)=>ChooseFolder();
-   locationRow=location;
-   var actions=new FlowLayoutPanel{Dock=DockStyle.Fill,FlowDirection=FlowDirection.RightToLeft,WrapContents=false,Padding=new Padding(0,8,0,0)};
-   start=Button("شروع دانلود");((GlassButton)start).Primary=true;start.Width=180;pause=Button("توقف");pause.Enabled=false;
-   connections.Minimum=1;connections.Maximum=16;connections.Value=8;connections.Width=64;connections.AccessibleName="تعداد اتصال هم‌زمان";connections.Margin=new Padding(16,10,4,0);
-   actions.Controls.Add(start);actions.Controls.Add(pause);actions.Controls.Add(connections);actions.Controls.Add(new Label{Text="اتصال هم‌زمان",AutoSize=true,Padding=new Padding(0,11,0,0),BackColor=Color.Transparent});layout.Controls.Add(actions,0,4);
-   start.Click+=async(s,e)=>await Start();pause.Click+=(s,e)=>{engine.Pause();pause.Enabled=false;status.Text="در حال توقف…";};
-   progress.Dock=DockStyle.Fill;progress.Maximum=1000;progress.Margin=Padding.Empty;layout.Controls.Add(progress,0,5);
-   status=Label("برای شروع، لینک فایل را وارد کنید.");layout.Controls.Add(status,0,6);
-   detail=Label("تا ۱۶ اتصال • توقف و ادامهٔ دانلود");detail.Font=Brand.Font(10);detail.RightToLeft=RightToLeft.No;detail.TextAlign=ContentAlignment.MiddleRight;layout.Controls.Add(detail,0,7);
-   var historyPanel=new GlassPanel{Dock=DockStyle.Fill,Padding=new Padding(20,12,20,14),Margin=Padding.Empty};content.Controls.Add(historyPanel,0,4);
-   var listLayout=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=1,RowCount=2};listLayout.RowStyles.Add(new RowStyle(SizeType.Absolute,38));listLayout.RowStyles.Add(new RowStyle(SizeType.Percent,100));historyPanel.Controls.Add(listLayout);
-   var listTitle=Label("دانلودهای کامل‌شده     •     کلیک: باز کردن فایل     /     راست‌کلیک: نمایش در پوشه");listTitle.Font=Brand.Font(12,FontStyle.Bold);listLayout.Controls.Add(listTitle,0,0);
-   history.Dock=DockStyle.Fill;history.View=View.Details;history.BorderStyle=BorderStyle.None;history.FullRowSelect=true;history.MultiSelect=false;history.HideSelection=false;history.AccessibleName="دانلودهای کامل‌شده";history.RightToLeft=RightToLeft.No;history.OwnerDraw=true;
-   history.Columns.Add("نام فایل",245);history.Columns.Add("حجم",110);history.Columns.Add("تاریخ دانلود",155);history.Columns.Add("مدت دانلود",90);history.Columns.Add("سرعت متوسط",110);history.SizeChanged+=(s,e)=>{history.Columns[0].Width=Math.Max(150,history.ClientSize.Width-485);};var listHost=new Panel{Dock=DockStyle.Fill};listHost.Controls.Add(history);emptyHint=Label("هنوز فایلی دریافت نشده\nاولین دانلود کامل‌شده اینجا نمایش داده می‌شود.");emptyHint.TextAlign=ContentAlignment.MiddleCenter;emptyHint.Dock=DockStyle.Fill;listHost.Controls.Add(emptyHint);emptyHint.BringToFront();listLayout.Controls.Add(listHost,0,1);history.DrawColumnHeader+=(s,e)=>{using(var b=new SolidBrush(dark?Color.FromArgb(39,55,73):Color.FromArgb(244,245,250)))e.Graphics.FillRectangle(b,e.Bounds);TextRenderer.DrawText(e.Graphics,e.Header.Text,Brand.Font(10),e.Bounds,history.ForeColor,TextFormatFlags.VerticalCenter|TextFormatFlags.Right|TextFormatFlags.RightToLeft);};
-   history.DrawItem+=(s,e)=>{e.DrawDefault=false;};history.DrawSubItem+=(s,e)=>{using(var b=new SolidBrush(e.Item.Selected?(dark?Color.FromArgb(68,55,110):Color.FromArgb(238,229,253)):history.BackColor))e.Graphics.FillRectangle(b,e.Bounds);TextRenderer.DrawText(e.Graphics,e.SubItem.Text,history.Font,e.Bounds,history.ForeColor,TextFormatFlags.VerticalCenter|TextFormatFlags.EndEllipsis|(e.ColumnIndex==0?TextFormatFlags.Left:TextFormatFlags.Right));};
-   var menu=new ContextMenuStrip{Font=Brand.Font(12),RightToLeft=RightToLeft.Yes};menu.Items.Add("باز کردن فایل",null,(s,e)=>OpenCompleted(false));menu.Items.Add("نمایش در پوشه",null,(s,e)=>OpenCompleted(true));history.ContextMenuStrip=menu;
-   history.MouseDown+=(s,e)=>{var hit=history.HitTest(e.Location);if(hit.Item!=null)hit.Item.Selected=true;else history.SelectedItems.Clear();};history.MouseClick+=(s,e)=>{if(e.Button==MouseButtons.Left&&history.HitTest(e.Location).Item!=null)OpenCompleted(false);};history.KeyDown+=(s,e)=>{if(e.KeyCode==Keys.Enter){OpenCompleted(false);e.Handled=true;}};menu.Opening+=(s,e)=>{e.Cancel=history.SelectedItems.Count==0;};
-   content.Controls.Add(new AdPlacement(restore && settingsPath==null){Margin=new Padding(0,10,0,0)},0,5);dark=false;PaintTheme(this);
-   Shown+=(s,e)=>{Brand.Cue(destination,"ابتدا پوشهٔ دانلود را انتخاب کنید");UpdateTarget();};
-   if(restore)try{saved=Saved.Load(settings);saved.Save(settings);link.Text=saved.Url;connections.Value=Math.Max(1,Math.Min(16,saved.Connections));UpdateTarget();ReloadHistory();}catch{status.Text="تنظیمات قبلی خوانده نشد؛ پوشه را دوباره انتخاب کنید.";}
+   BuildShell();
+   BuildToolbar();
+   BuildComposer();
+   BuildStats();
+   BuildTableArea();
+   BuildStatusBar();
+   BuildSponsor(restore && settingsPath==null);
+   BuildSidebar();
+   dark=saved.Dark;sidebarCollapsed=saved.SidebarCollapsed;
+   shellLayout.ColumnStyles[0].Width=sidebarCollapsed?66:238;
+   PaintTheme(this);ApplyLanguage();
+   SetFilter("all");
+   Resize+=(s,e)=>UpdateResponsiveLayout();
+   contentLayout.SizeChanged+=(s,e)=>UpdateResponsiveLayout();
+   UpdateResponsiveLayout();
+   Shown+=(s,e)=>{
+    UpdateTarget();
+    Fade(Fdm.Of(dark).Page,255,0,0.45,null);
+    for(int n=0;n<navItems.Count;n++){navItems[n].SetEnterDelay(0.05*n+0.05);navItems[n].AnimateEnter(false);}
+    for(int n=0;n<navItems.Count;n++){navItems[n].SetEnterDelay(0.05*n+0.05);navItems[n].AnimateEnter(true);}
+   };
+   if(restore)try{link.Text=saved.Url;connections.SetValue(Math.Max(1,Math.Min(16,saved.Connections)));UpdateTarget();ReloadHistory();}catch{settingsError=Lang.T("error.settings");}
+   if(settingsError!=null)status.Text=settingsError;
+   UpdateQueueBadge();
    RenderSpeed();
    if(restore && settingsPath==null){var reportsTimer=new Timer{Interval=60000};reportsTimer.Tick+=async(s,e)=>await ProblemReports.Flush();Shown+=async(s,e)=>await ProblemReports.Flush();reportsTimer.Start();FormClosed+=(s,e)=>reportsTimer.Dispose();}
-   timer.Interval=500;timer.Tick+=(s,e)=>RefreshDownload();timer.Start();
+   timer.Interval=400;timer.Tick+=(s,e)=>RefreshDownload();timer.Start();
    FormClosing+=async(s,e)=>{if(engine.Running&&!closing){e.Cancel=true;closing=true;engine.Pause();Enabled=false;while(engine.Running)await Task.Delay(100);Close();}};
   }
-  Control Input(TextBox box){var panel=new GlassPanel{Dock=DockStyle.Fill,Radius=12,Padding=new Padding(12,6,12,5),Margin=new Padding(0,2,6,4)};box.BorderStyle=BorderStyle.None;box.Dock=DockStyle.Fill;panel.Controls.Add(box);return panel;}
-  Label Stat(TableLayoutPanel host,string title,string value,int column,Color tint){var panel=new GlassPanel{Dock=DockStyle.Fill,Radius=14,Padding=new Padding(14,3,14,3),Margin=new Padding(6,0,6,0),Tint=tint};var rows=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=1,RowCount=2};rows.RowStyles.Add(new RowStyle(SizeType.Percent,65));rows.RowStyles.Add(new RowStyle(SizeType.Percent,35));var number=Label(value);number.Font=Brand.Font(20,FontStyle.Bold);number.TextAlign=ContentAlignment.MiddleCenter;rows.Controls.Add(number,0,0);var caption=Label(title);caption.Font=Brand.Font(9);caption.TextAlign=ContentAlignment.MiddleCenter;rows.Controls.Add(caption,0,1);panel.Controls.Add(rows);host.Controls.Add(panel,column,0);return number;}
-  Label Label(string text) {return new Label {Text=text,Dock=DockStyle.Fill,TextAlign=ContentAlignment.MiddleLeft,AutoEllipsis=true,BackColor=Color.Transparent,Margin=Padding.Empty,Font=Brand.Font(10)};}
-  GlassButton Button(string text) {int icon=text=="دانلود جدید"?1:text=="فایل‌های دریافت‌شده"?2:text=="پوشهٔ دانلودها"?3:text=="تنظیم پوشه"?4:text=="تیره / روشن"?5:text=="گزارش مشکل"?6:text=="ویندوز و مرورگر"?7:0;return new GlassButton {Text=text,Glyph=icon,Font=Brand.Font(icon>0?10:12),Height=44,Width=110,Margin=new Padding(4,4,4,4)};}
-  void PaintTheme(Control root) {
-   GlassDark=dark;
-   root.ForeColor=dark ? Color.FromArgb(233,235,250) : Color.FromArgb(45,40,63);
-   if(root is TextBox || root is NumericUpDown || root is ListView)root.BackColor=dark?Color.FromArgb(33,38,59):Color.FromArgb(253,253,255);
-   else if(root is Panel || root is Label || root is LogoView)root.BackColor=Color.Transparent;
-   if(root is GlassPanel)((GlassPanel)root).Dark=dark;
-   if(root is GlassButton)((GlassButton)root).Dark=dark;
-   if(root is GlassProgress)((GlassProgress)root).Dark=dark;
-   foreach(Control child in root.Controls) PaintTheme(child);
+  protected override void Dispose(bool disposing){if(disposing){timer.Stop();timer.Dispose();hints.Dispose();if(columnAnimator!=null)Ticker.Remove(columnAnimator);}base.Dispose(disposing);}
+
+  // ───────────────────────────── layout ─────────────────────────────
+  void BuildShell(){
+   bodyLayout=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,Margin=Padding.Empty,Padding=new Padding(0)};
+   bodyLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+   bodyLayout.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+   bodyLayout.RowStyles.Add(new RowStyle(SizeType.Absolute,96));
+   Controls.Add(bodyLayout);
+   shellLayout=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=2,Margin=Padding.Empty,Padding=new Padding(0)};
+   shellLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,238));
+   shellLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+   bodyLayout.Controls.Add(shellLayout,0,0);
+   sidebarHost=new Panel{Dock=DockStyle.Fill,BackColor=Color.Transparent,Margin=Padding.Empty,Padding=new Padding(10,10,10,10)};
+   shellLayout.Controls.Add(sidebarHost,0,0);
+   contentLayout=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=1,RowCount=5,Margin=Padding.Empty,Padding=new Padding(14,10,14,6)};
+   foreach(int h in new[]{64,78,78})contentLayout.RowStyles.Add(new RowStyle(SizeType.Absolute,h));
+   contentLayout.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+   contentLayout.RowStyles.Add(new RowStyle(SizeType.Absolute,44));
+   shellLayout.Controls.Add(contentLayout,1,0);
   }
+
+  void BuildToolbar(){
+   var bar=new Panel{Dock=DockStyle.Fill,BackColor=Color.Transparent,Margin=Padding.Empty};
+   var row=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=5,RowCount=1,Margin=Padding.Empty,Padding=new Padding(0)};
+   toolbarRow=row;
+   row.RowStyles.Add(new RowStyle(SizeType.Absolute,52));
+   row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,136));
+   row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,128));
+   row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+   row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,164));
+   row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,214));
+   // left: primary action
+   addButton=new GlassButton{Text=Lang.T("action.add"),Primary=true,Glyph=1,Font=Brand.Font(11,FontStyle.Bold),Dock=DockStyle.Fill,Margin=new Padding(0,6,10,6),AccessibleName=Lang.T("action.addNew")};
+   localized.Add(new KeyValuePair<Control,string>(addButton,"action.add"));
+   addButton.Click+=(s,e)=>{link.Focus();link.SelectAll();};
+   row.Controls.Add(addButton,4,0);
+   batchButton=new GlassButton{Text=Lang.T("action.batch"),Glyph=22,Font=Brand.Font(10),Dock=DockStyle.Fill,Margin=new Padding(0,6,10,6),AccessibleName=Lang.T("action.batch")};
+   batchButton.Click+=(s,e)=>OpenBatch();
+   localized.Add(new KeyValuePair<Control,string>(batchButton,"action.batch"));
+   row.Controls.Add(batchButton,3,0);
+   // search
+   searchField=new SearchField{Placeholder=Lang.T("search.placeholder"),AccessibleName=Lang.T("search.label"),Dock=DockStyle.Fill};
+   searchField.QueryChanged+=(s,e)=>{searchTerm=searchField.Input.Text.Trim();RefreshTable();};
+   var searchHost=new Panel{Dock=DockStyle.Fill,Margin=new Padding(0,6,10,6),BackColor=Color.Transparent};
+   searchHost.Controls.Add(searchField);
+   row.Controls.Add(searchHost,2,0);
+   // right: sort + filter
+   sortButton=MenuButton(Lang.T("sort.newest"),16);
+   filterButton=MenuButton(Lang.T("filter.all"),17);
+   localized.Add(new KeyValuePair<Control,string>(sortButton,"sort.newest"));
+   localized.Add(new KeyValuePair<Control,string>(filterButton,"filter.all"));
+   row.Controls.Add(sortButton,1,0);
+   row.Controls.Add(filterButton,0,0);
+   bar.Controls.Add(row);
+   contentLayout.Controls.Add(bar,0,0);
+   var sortMenu=new ContextMenuStrip{Font=Brand.Font(10),RightToLeft=Lang.Rtl?RightToLeft.Yes:RightToLeft.No};
+   sortMenu.Items.Add(Lang.T("sort.newest"),null,(s,e)=>SetSort("date",true));
+   sortMenu.Items.Add(Lang.T("sort.oldest"),null,(s,e)=>SetSort("date",false));
+   sortMenu.Items.Add(Lang.T("sort.name"),null,(s,e)=>SetSort("title",false));
+   sortMenu.Items.Add(Lang.T("sort.size"),null,(s,e)=>SetSort("size",true));
+   sortButton.Menu=sortMenu;
+   var filterMenu=new ContextMenuStrip{Font=Brand.Font(10),RightToLeft=Lang.Rtl?RightToLeft.Yes:RightToLeft.No};
+   filterMenu.Items.Add(Lang.T("filter.all"),null,(s,e)=>SetFilter("all"));
+   filterMenu.Items.Add(Lang.T("filter.active"),null,(s,e)=>SetFilter("active"));
+   filterMenu.Items.Add(Lang.T("filter.completed"),null,(s,e)=>SetFilter("completed"));
+   filterMenu.Items.Add(Lang.T("filter.queued"),null,(s,e)=>SetFilter("queued"));
+   filterButton.Menu=filterMenu;
+  }
+
+  GlassButton MenuButton(string text,int glyph){
+   var b=new GlassButton{Text=text,Glyph=glyph,GlyphTrailing=true,Font=Brand.Font(10),Dock=DockStyle.Fill,Margin=new Padding(0,6,8,6),AccessibleName=text};
+   return b;
+  }
+
+  void BuildComposer(){
+   var card=new GlassPanel{Dock=DockStyle.Fill,Radius=16,Padding=new Padding(14),Margin=new Padding(0,0,0,6),Elevated=true};
+   composer=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=1,RowCount=1,Margin=Padding.Empty};
+   composer.RowStyles.Add(new RowStyle(SizeType.Absolute,46));
+   card.Controls.Add(composer);
+   var row=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=5,RowCount=1,Margin=Padding.Empty};
+   composerRow=row;
+   row.RowStyles.Add(new RowStyle(SizeType.Absolute,46));
+   row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+   row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,180));
+   row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,108));
+   row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,92));
+   row.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute,182));
+   // actions on the left, link field on the right (RTL reading order)
+   var actionHost=new Panel{Dock=DockStyle.Fill,Margin=Padding.Empty,BackColor=Color.Transparent};
+   start=Button(Lang.T("action.start"),1);((GlassButton)start).Primary=true;start.Dock=DockStyle.Fill;start.Font=Brand.Font(11,FontStyle.Bold);localized.Add(new KeyValuePair<Control,string>(start,"action.start"));
+   pause=Button(Lang.T("action.stop"),10);pause.Dock=DockStyle.Fill;pause.Visible=false;pause.Font=Brand.Font(11,FontStyle.Bold);localized.Add(new KeyValuePair<Control,string>(pause,"action.stop"));
+   actionHost.Controls.Add(start);actionHost.Controls.Add(pause);
+   row.Controls.Add(actionHost,4,0);
+   connections.Dock=DockStyle.Fill;connections.Margin=new Padding(0,0,10,0);connections.AccessibleName=Lang.T("connections.label");
+   hints.SetToolTip(connections,Lang.T("connections.hint"));
+   row.Controls.Add(connections,3,0);
+   paste=Button(Lang.T("action.paste"),0);paste.Dock=DockStyle.Fill;paste.Margin=new Padding(0,0,10,0);localized.Add(new KeyValuePair<Control,string>(paste,"action.paste"));
+   row.Controls.Add(paste,2,0);
+   linkSummary=new GlassButton{Text=Lang.T("link.view"),RightToLeft=Lang.Rtl?RightToLeft.Yes:RightToLeft.No,Font=Brand.Font(10),Dock=DockStyle.Fill,Margin=new Padding(0,0,10,0),AccessibleName=Lang.T("link.edit")};
+   linkSummary.Click+=(s,e)=>EditLink();
+   row.Controls.Add(linkSummary,1,0);
+   link.RightToLeft=RightToLeft.No;link.Font=Brand.Font(11);link.AccessibleName=Lang.T("link.label");link.BorderStyle=BorderStyle.None;link.TextAlign=Lang.Rtl?HorizontalAlignment.Right:HorizontalAlignment.Left;
+   var inputShell=new GlassPanel{Dock=DockStyle.Fill,Radius=12,Padding=new Padding(12,9,12,7),Margin=Padding.Empty,Elevated=false};
+   link.Dock=DockStyle.Fill;inputShell.Controls.Add(link);
+   row.Controls.Add(inputShell,0,0);
+   composer.Controls.Add(row,0,0);
+   status=new Label{Text=Lang.T("status.idle"),BackColor=Color.Transparent,Font=Brand.Font(9),AutoSize=false};
+   contentLayout.Controls.Add(card,0,1);
+   paste.Click+=(s,e)=>{try{if(Clipboard.ContainsText()){link.Text=Clipboard.GetText().Trim();link.Focus();}else MessageBox.Show(Lang.T("error.clipboard"),Text);}catch(Exception ex){MessageBox.Show(ex.Message,Text);}};
+   link.TextChanged+=(s,e)=>UpdateTarget();
+   link.HandleCreated+=(s,e)=>Brand.Cue(link,Lang.T("link.placeholder"));
+   start.Click+=async(s,e)=>await Start();
+   pause.Click+=(s,e)=>{engine.Pause();pause.Enabled=false;status.Text=Lang.T("status.stopping");};
+  }
+
+  void BuildStats(){
+   var row=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=3,RowCount=1,Margin=new Padding(0,4,0,8)};
+   row.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+   for(int n=0;n<3;n++)row.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,33.333f));
+   speed=new StatTile{Caption=Lang.T("stat.speed"),IconGlyph="speed",Suffix=" MB/s",Format="0.00",Dock=DockStyle.Fill};
+   count=new StatTile{Caption=Lang.T("stat.completed"),IconGlyph="count",Format="0",Dock=DockStyle.Fill};
+   total=new StatTile{Caption=Lang.T("stat.size"),IconGlyph="size",Suffix=" MB",Format="0.0",Dock=DockStyle.Fill};
+   row.Controls.Add(speed,0,0);row.Controls.Add(count,1,0);row.Controls.Add(total,2,0);
+   speed.Click+=(s,e)=>{saved.SpeedInBits=!saved.SpeedInBits;RenderSpeed();ReloadHistory();try{saved.Save(settings);}catch(Exception ex){MessageBox.Show(ex.Message,Text);}};
+   speed.Cursor=Cursors.Hand;
+   speed.TabStop=true;count.TabStop=false;total.TabStop=false;
+   hints.SetToolTip(speed,Lang.T("stat.speedTip"));
+   contentLayout.Controls.Add(row,0,2);
+  }
+
+  void BuildTableArea(){
+   var host=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=1,RowCount=2,Margin=Padding.Empty};
+   host.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+   host.RowStyles.Add(new RowStyle(SizeType.Absolute,86));
+   history=new DownloadTable{Dock=DockStyle.Fill,Margin=Padding.Empty};
+   emptyHint=history.EmptyHint;
+   history.Activated+=(item)=>OpenItem(item);
+   history.MenuRequested+=(item)=>ShowItemMenu(item);
+   var menu=new ContextMenuStrip{Font=Brand.Font(11),RightToLeft=Lang.Rtl?RightToLeft.Yes:RightToLeft.No};
+   menu.Items.Add(Lang.T("menu.open"),null,(s,e)=>OpenCompleted(false));
+   menu.Items.Add(Lang.T("menu.reveal"),null,(s,e)=>OpenCompleted(true));
+   history.Menu=menu;
+   history.SelectionChanged+=(s,e)=>RefreshFilterLabels();
+   host.Controls.Add(history,0,0);
+   dropZone=new DropZone{Message=Lang.T("drop.hint"),Dock=DockStyle.Fill,Margin=new Padding(0,10,0,0)};
+   dropZone.Dropped+=(files)=>{
+    foreach(string file in files){
+     if(file.StartsWith("http://",StringComparison.OrdinalIgnoreCase)||file.StartsWith("https://",StringComparison.OrdinalIgnoreCase))ReceiveDownload(file);
+    }
+   };
+   host.Controls.Add(dropZone,0,1);
+   contentLayout.Controls.Add(host,0,3);
+   tableHost=history;
+  }
+
+  void BuildStatusBar(){
+   statusStrip=new StatusStrip{Dock=DockStyle.Fill,Margin=new Padding(0),SpeedText="▼ 0.00 MB/s",BadgeText=CompletedFile.PersianDigits("0")+" "+Lang.T("status.connections")};
+   contentLayout.Controls.Add(statusStrip,0,4);
+  }
+
+  void BuildSponsor(bool online){
+   ad=new AdPlacement(online){Dock=DockStyle.Fill,Margin=new Padding(14,4,14,10)};
+   var host=new SmoothTableLayout{Dock=DockStyle.Fill,ColumnCount=1,RowCount=1,Margin=Padding.Empty};
+   host.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+   host.Controls.Add(ad,0,0);
+   if(bodyLayout!=null)bodyLayout.Controls.Add(host,0,1);
+  }
+
+  void BuildSidebar(){
+   var layout=new SmoothTableLayout{Dock=DockStyle.None,Height=510,ColumnCount=1,RowCount=13,Margin=Padding.Empty,RightToLeft=Lang.Rtl?RightToLeft.Yes:RightToLeft.No};
+   layout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent,100));
+   var heights=new[]{34,44,44,44,44,18,44,44,44,18,44,44,44};
+   for(int n=0;n<heights.Length;n++)layout.RowStyles.Add(new RowStyle(SizeType.Absolute,heights[n]));
+   var brandLabel=new Label{Text=Lang.T("app.name"),Dock=DockStyle.Fill,TextAlign=Lang.Rtl?ContentAlignment.MiddleRight:ContentAlignment.MiddleLeft,Font=Brand.Font(12.5f,FontStyle.Bold),BackColor=Color.Transparent,ForeColor=Fdm.Light.Ink,AutoSize=false};
+   sidebarBrand=brandLabel;localized.Add(new KeyValuePair<Control,string>(brandLabel,"app.name"));alignedLabels.Add(brandLabel);
+   layout.Controls.Add(brandLabel,0,0);
+   navItems.Add(Nav(Lang.T("filter.allNav"),0,()=>SetFilter("all")));
+   navItems.Add(Nav(Lang.T("filter.active"),1,()=>SetFilter("active")));
+   navItems.Add(Nav(Lang.T("filter.completed"),2,()=>SetFilter("completed")));
+   navItems.Add(Nav(Lang.T("filter.queuedNav"),3,()=>SetFilter("queued")));
+   layout.Controls.Add(navItems[0],0,1);
+   layout.Controls.Add(navItems[1],0,2);
+   layout.Controls.Add(navItems[2],0,3);
+   layout.Controls.Add(navItems[3],0,4);
+   layout.Controls.Add(new Panel{Dock=DockStyle.Fill,Margin=new Padding(10,6,10,6),BackColor=Color.Transparent},0,5);
+   folder=NavButton(Lang.T("nav.downloads"),5);
+   folder.Tag="nav.downloads";
+   folder.Click+=(s,e)=>{try{if(!String.IsNullOrEmpty(saved.Folder)&&Directory.Exists(saved.Folder))Process.Start("explorer.exe","\""+saved.Folder+"\"");else ChooseFolder();}catch(Exception ex){MessageBox.Show(ex.Message,Text);}};
+   var setFolder=NavButton(Lang.T("nav.setFolder"),4);
+   setFolder.Tag="nav.setFolder";
+   setFolder.Click+=(s,e)=>{if(!engine.Running)ChooseFolder();};
+   var report=NavButton(Lang.T("nav.report"),6);
+   report.Tag="nav.report";
+   report.Click+=(s,e)=>{using(var dialog=new ReportDialog()){FdmTheme.Apply(dialog,dialog,dark);dialog.ShowDialog(this);}};
+   layout.Controls.Add(folder,0,6);
+   layout.Controls.Add(setFolder,0,7);
+   layout.Controls.Add(report,0,8);
+   layout.Controls.Add(new Panel{Dock=DockStyle.Fill,Margin=new Padding(10,6,10,6),BackColor=Color.Transparent},0,9);
+   theme=NavButton(Lang.T("nav.theme"),9);
+   theme.Tag="nav.theme";
+   theme.Click+=(s,e)=>ToggleTheme();
+   var integration=NavButton(Lang.T("nav.integration"),7);
+   integration.Tag="nav.integration";
+   integration.Click+=(s,e)=>IntegrationSettings();
+   languageItem=NavButton(Lang.English?"فارسی":"English",12);
+   languageItem.Click+=(s,e)=>ToggleLanguage();
+   layout.Controls.Add(theme,0,10);
+   layout.Controls.Add(languageItem,0,11);
+   layout.Controls.Add(integration,0,12);
+   toggleSidebar=new GlassButton{Glyph=18,Font=Brand.Font(10),Dock=DockStyle.Bottom,Height=44,Margin=Padding.Empty,AccessibleName=Lang.T("action.toggleSidebar")};
+   toggleSidebar.Click+=(s,e)=>ToggleSidebar();
+   sidebarScroll=new Panel{Dock=DockStyle.Fill,AutoScroll=true,BackColor=Color.Transparent};
+   sidebarScroll.Controls.Add(layout);
+   sidebarScroll.SizeChanged+=(s,e)=>FitSidebar(layout);
+   sidebarScroll.Layout+=(s,e)=>FitSidebar(layout);
+   sidebarHost.Controls.Add(sidebarScroll);sidebarHost.Controls.Add(toggleSidebar);
+  }
+  void FitSidebar(Control layout){
+   int scrollbar=sidebarScroll.Height<layout.Height?SystemInformation.VerticalScrollBarWidth:0;
+   var bounds=new Rectangle(0,sidebarScroll.AutoScrollPosition.Y,Math.Max(1,sidebarScroll.Width-scrollbar),510);
+   if(layout.Bounds!=bounds)layout.Bounds=bounds;
+  }
+
+  NavItem Nav(string text,int glyph,Action action){
+   var item=new NavItem{Caption=text,Glyph=glyph,Dock=DockStyle.Fill,Margin=new Padding(0,1,0,1)};
+   item.Click+=(s,e)=>{if(action!=null)action();};
+   return item;
+  }
+  NavItem NavButton(string text,int glyph){
+   var item=new NavItem{Caption=text,Glyph=glyph,Dock=DockStyle.Fill,Margin=new Padding(0,1,0,1)};
+   return item;
+  }
+
+  void ToggleLanguage(){
+   Lang.English=!Lang.English;
+   saved.English=Lang.English;
+   try{saved.Save(settings);}catch{}
+   ApplyLanguage();
+  }
+  void ApplyLanguage(){
+   SuspendLayout();
+   try{
+   Text=Lang.T("app.name");
+   foreach(var entry in localized)entry.Key.Text=Lang.T(entry.Value);
+   foreach(Label label in alignedLabels)label.TextAlign=Lang.Rtl?ContentAlignment.MiddleRight:ContentAlignment.MiddleLeft;
+   Lang.Apply(this);
+   Brand.Rescale(this);
+   titleBar.ApplyLanguage();
+   LocalizeMenu(sortButton.Menu,new[]{"sort.newest","sort.oldest","sort.name","sort.size"});
+   LocalizeMenu(filterButton.Menu,new[]{"filter.all","filter.active","filter.completed","filter.queued"});
+   LocalizeMenu(history.Menu,new[]{"menu.open","menu.reveal"});
+   navItems[0].Caption=Lang.T("filter.allNav");
+   navItems[1].Caption=Lang.T("filter.active");
+   navItems[2].Caption=Lang.T("filter.completed");
+   navItems[3].Caption=Lang.T("filter.queuedNav");
+   languageItem.Caption=Lang.English?"فارسی":"English";
+   LocalizeSidebar(sidebarHost);
+   hints.SetToolTip(languageItem,Lang.T("nav.language")+": "+languageItem.Caption);
+   if(dropZone!=null){dropZone.Message=Lang.T("drop.hint");dropZone.Invalidate();}
+   if(ad!=null)ad.ApplyLanguage();
+   searchField.Placeholder=Lang.T("search.placeholder");
+   searchField.Input.Tag=Lang.T("search.placeholder");
+   searchField.Input.RightToLeft=Lang.Rtl?RightToLeft.Yes:RightToLeft.No;
+   searchField.ApplyLanguage();
+   Brand.Cue(searchField.Input,Lang.T("search.placeholder"));
+   link.TextAlign=Lang.Rtl?HorizontalAlignment.Right:HorizontalAlignment.Left;
+   speed.Caption=Lang.T("stat.speed");count.Caption=Lang.T("stat.completed");total.Caption=Lang.T("stat.size");
+   linkSummary.AccessibleName=Lang.T("link.edit");
+   linksAccessibleName();
+   toggleSidebar.AccessibleName=Lang.T("action.toggleSidebar");hints.SetToolTip(toggleSidebar,toggleSidebar.AccessibleName);
+   foreach(var button in new[]{start,pause,paste,addButton,batchButton,sortButton,filterButton})button.AccessibleName=button.Text;
+   RenderSpeed();
+   RefreshFilterLabels();
+   UpdateTarget();
+   RefreshTable();
+   RefreshStatusStrip();
+   }finally{ResumeLayout(true);}
+   Invalidate(true);
+  }
+  void LocalizeSidebar(Control root){foreach(Control c in root.Controls){var item=c as NavItem;if(item!=null){if(item.Tag is string)item.Caption=Lang.T((string)item.Tag);hints.SetToolTip(item,item.Caption);}LocalizeSidebar(c);}}
+  void LocalizeMenu(ContextMenuStrip menu,string[] keys){menu.RightToLeft=Lang.Rtl?RightToLeft.Yes:RightToLeft.No;menu.Font=Brand.Font(10);for(int n=0;n<keys.Length;n++)menu.Items[n].Text=Lang.T(keys[n]);}
+  void linksAccessibleName(){
+   link.AccessibleName=Lang.T("link.label");
+   destination.AccessibleName=Lang.T("link.path");
+   connections.AccessibleName=Lang.T("connections.label");
+   hints.SetToolTip(connections,Lang.T("connections.hint"));
+  }
+  void ToggleSidebar(){
+   sidebarCollapsed=!sidebarCollapsed;
+   saved.SidebarCollapsed=sidebarCollapsed;try{saved.Save(settings);}catch{}
+   sidebarBrand.Visible=!sidebarCollapsed;
+   sidebarHost.Padding=sidebarCollapsed?new Padding(2,10,2,8):new Padding(10);
+   if(columnAnimator!=null)Ticker.Remove(columnAnimator);
+   int from=(int)shellLayout.ColumnStyles[0].Width;
+   int to=sidebarCollapsed?66:238;
+   columnAnimator=new ColumnAnimator(shellLayout,0,from,to,SystemInformation.UIEffectsEnabled?0.22:0);
+   Ticker.Add(columnAnimator);
+  }
+  void ToggleTheme(){
+   dark=!dark;saved.Dark=dark;try{saved.Save(settings);}catch{}
+   PaintTheme(this);
+   Fade(Fdm.Of(dark).Page,85,0,0.18,null);
+   Invalidate(true);
+  }
+  void UpdateResponsiveLayout(){
+   if(updatingLayout||composerRow==null||toolbarRow==null||sidebarBrand==null)return;
+   updatingLayout=true;
+   try{
+    bool compact=contentLayout.Width<980;
+    if(compact!=compactLayout){
+     compactLayout=compact;
+     var search=searchField.Parent;var actions=start.Parent;var input=link.Parent;
+     toolbarRow.SuspendLayout();composerRow.SuspendLayout();
+     toolbarRow.Controls.Clear();toolbarRow.ColumnStyles.Clear();toolbarRow.RowStyles.Clear();
+     composerRow.Controls.Clear();composerRow.ColumnStyles.Clear();composerRow.RowStyles.Clear();
+     toolbarRow.ColumnCount=compact?4:5;toolbarRow.RowCount=compact?2:1;
+     composerRow.ColumnCount=compact?4:5;composerRow.RowCount=compact?2:1;
+     foreach(int width in compact?new[]{130,130,0,180}:new[]{136,128,0,164,214})toolbarRow.ColumnStyles.Add(new ColumnStyle(width==0?SizeType.Percent:SizeType.Absolute,width==0?100:width));
+     foreach(int width in compact?new[]{0,108,100,182}:new[]{0,180,108,100,182})composerRow.ColumnStyles.Add(new ColumnStyle(width==0?SizeType.Percent:SizeType.Absolute,width==0?100:width));
+     for(int n=0;n<(compact?2:1);n++){toolbarRow.RowStyles.Add(new RowStyle(SizeType.Percent,compact?50:100));composerRow.RowStyles.Add(new RowStyle(SizeType.Percent,compact?50:100));}
+     toolbarRow.SetColumnSpan(search,compact?4:1);
+     toolbarRow.Controls.Add(search,compact?0:2,0);
+     toolbarRow.Controls.Add(filterButton,0,compact?1:0);toolbarRow.Controls.Add(sortButton,1,compact?1:0);
+     toolbarRow.Controls.Add(batchButton,compact?2:3,compact?1:0);toolbarRow.Controls.Add(addButton,compact?3:4,compact?1:0);
+     composerRow.SetColumnSpan(input,compact?3:1);composerRow.Controls.Add(input,0,0);
+     composerRow.Controls.Add(linkSummary,compact?3:1,0);composerRow.Controls.Add(paste,compact?1:2,compact?1:0);
+     composerRow.Controls.Add(connections,compact?2:3,compact?1:0);composerRow.Controls.Add(actions,compact?3:4,compact?1:0);
+     input.Margin=compact?new Padding(0,0,0,6):Padding.Empty;
+     linkSummary.Margin=new Padding(0,0,10,compact?6:0);
+     composer.RowStyles[0].SizeType=SizeType.Percent;composer.RowStyles[0].Height=100;
+     toolbarRow.ResumeLayout(true);composerRow.ResumeLayout(true);
+    }
+    contentLayout.RowStyles[0].Height=compact?106:64;contentLayout.RowStyles[1].Height=compact?126:78;
+    bodyLayout.RowStyles[1].Height=ClientSize.Height<720?80:96;
+    var tableLayout=(TableLayoutPanel)history.Parent;
+    bool showDropZone=ClientSize.Height>=740;
+    dropZone.Visible=showDropZone;
+    tableLayout.RowStyles[1].Height=showDropZone?86:0;
+    sidebarBrand.Visible=!sidebarCollapsed;
+    sidebarHost.Padding=sidebarCollapsed?new Padding(2,10,2,8):new Padding(10);
+   }finally{updatingLayout=false;}
+  }
+
+  // ───────────────────────────── helpers ─────────────────────────────
+  Control Input(TextBox box){
+   var panel=new GlassPanel{Dock=DockStyle.Fill,Radius=12,Padding=new Padding(12,6,12,4),Margin=Padding.Empty,Elevated=false};
+   panel.BackColor=Color.Transparent;
+   box.BorderStyle=BorderStyle.None;box.Dock=DockStyle.Fill;panel.Controls.Add(box);return panel;
+  }
+  Label Label(string text){
+   var label=new Label{Text=text,Dock=DockStyle.Fill,TextAlign=Lang.Rtl?ContentAlignment.MiddleRight:ContentAlignment.MiddleLeft,AutoEllipsis=true,AutoSize=false,BackColor=Color.Transparent,Margin=Padding.Empty,Font=Brand.Font(10)};
+   alignedLabels.Add(label);return label;
+  }
+  GlassButton Button(string text,int glyph){return new GlassButton{Text=text,Glyph=glyph,Font=Brand.Font(10),Height=40,Width=110,Margin=new Padding(0)};}
+
+  void RefreshFilterLabels(){
+   filterButton.Text=Lang.T(filterNames[filter]);
+   sortButton.Text=history.SortKey=="title"?Lang.T("sort.name"):(history.SortKey=="size"?Lang.T("sort.size"):(history.SortDescending?Lang.T("sort.newest"):Lang.T("sort.oldest")));
+  }
+  void SetFilter(string value){
+   filter=value;
+   for(int n=0;n<navItems.Count;n++)navItems[n].Active=(n<4&&navNames[n]==value);
+   RefreshFilterLabels();
+   RefreshTable();
+  }
+  void SetSort(string key,bool descending){
+   history.SortKey=key;history.SortDescending=descending;
+   history.ApplySort();
+   RefreshFilterLabels();
+  }
+  readonly string[] navNames={"all","active","completed","queued"};
+  readonly Dictionary<string,string> filterNames=new Dictionary<string,string>{{"all","filter.all"},{"active","filter.active"},{"completed","filter.completed"},{"queued","filter.queued"}};
+
+  void PaintTheme(Control root) {
+   FdmTheme.Apply(this,root,dark);
+  }
+
   void UpdateTarget() {
    if(engine.Running)return;
    Uri uri;string url=link.Text.Trim();
    bool valid=Uri.TryCreate(url,UriKind.Absolute,out uri) && (uri.Scheme=="http" || uri.Scheme=="https");
    try{destination.Text=valid?saved.TargetFor(url):(saved.Folder ?? "");}catch{destination.Text=saved.Folder ?? "";}
-   linkSummary.Text=valid?uri.Host+" / "+DownloadEngine.FileName(url):(String.IsNullOrEmpty(url)?"افزودن لینک دانلود…":"نمایش و ویرایش لینک…");
+   linkSummary.Text=valid?uri.Host+" / "+DownloadEngine.FileName(url):(String.IsNullOrEmpty(url)?Lang.T("link.view"):Lang.T("link.edit"));
    bool configured=!String.IsNullOrEmpty(saved.Folder);
-   locationRow.Visible=!configured;downloadLayout.RowStyles[3].Height=configured?0:50;
-   contentLayout.RowStyles[2].Height=configured?292:342;
-   fileSummary.Text=configured?(valid?"فایل: "+Path.GetFileName(destination.Text):"پوشهٔ دانلود آماده است؛ لینک را بچسبانید."):"ابتدا پوشهٔ دانلود را انتخاب کنید";
-   hints.SetToolTip(fileSummary,configured?saved.Folder:"");
+   statusStrip.Hint=!configured?Lang.T("folder.incomplete"):(valid?destination.Text:(saved.Folder??""));
+   statusStrip.Invalidate();
   }
+
   void EditLink() {
-   using(var dialog=new Form{Text="لینک کامل دانلود",Size=new Size(720,260),MinimumSize=new Size(520,240),StartPosition=FormStartPosition.CenterParent,Font=Brand.Font(12),RightToLeft=RightToLeft.Yes,MinimizeBox=false,MaximizeBox=false}){
-    var full=new TextBox{Text=link.Text,Multiline=true,ScrollBars=ScrollBars.Vertical,RightToLeft=RightToLeft.No,Dock=DockStyle.Fill,AccessibleName="لینک کامل دانلود"};
-    var body=new SmoothTableLayout{Dock=DockStyle.Fill,Padding=new Padding(18),RowCount=3,ColumnCount=1};body.RowStyles.Add(new RowStyle(SizeType.Absolute,28));body.RowStyles.Add(new RowStyle(SizeType.Percent,100));body.RowStyles.Add(new RowStyle(SizeType.Absolute,48));body.Controls.Add(Label("لینک کامل را ببینید یا ویرایش کنید"),0,0);body.Controls.Add(full,0,1);
-    var save=new GlassButton{Text="تأیید لینک",Dock=DockStyle.Right,Width=130,DialogResult=DialogResult.OK,Primary=true};body.Controls.Add(save,0,2);dialog.Controls.Add(body);dialog.AcceptButton=save;
+   using(var dialog=new GlassForm{Text=Lang.T("link.dialog.title"),ClientSize=new Size(720,280),MinimumSize=new Size(520,260),StartPosition=FormStartPosition.CenterParent,Font=Brand.Font(11),RightToLeft=Lang.Rtl?RightToLeft.Yes:RightToLeft.No}){
+    var full=new TextBox{Text=link.Text,Multiline=true,ScrollBars=ScrollBars.Vertical,RightToLeft=RightToLeft.No,Dock=DockStyle.Fill,Font=Brand.Font(11),BorderStyle=BorderStyle.None,AccessibleName=Lang.T("link.dialog.title")};
+    var body=new SmoothTableLayout{Dock=DockStyle.Fill,Padding=new Padding(22),RowCount=3,ColumnCount=1};
+    body.RowStyles.Add(new RowStyle(SizeType.Absolute,28));
+    body.RowStyles.Add(new RowStyle(SizeType.Percent,100));
+    body.RowStyles.Add(new RowStyle(SizeType.Absolute,48));
+    body.Controls.Add(Label(Lang.T("link.dialog.hint")),0,0);
+    var shell=new GlassPanel{Dock=DockStyle.Fill,Radius=12,Padding=new Padding(12),Elevated=false};shell.BackColor=Color.Transparent;shell.Controls.Add(full);
+    body.Controls.Add(shell,0,1);
+    var save=new GlassButton{Text=Lang.T("link.dialog.confirm"),Dock=DockStyle.Right,Width=140,DialogResult=DialogResult.OK,Primary=true};
+    body.Controls.Add(save,0,2);dialog.Controls.Add(body);dialog.AcceptButton=save;
+    FdmTheme.Apply(dialog,dialog,dark);
+    dialog.KeyPreview=true;dialog.KeyDown+=(s,e)=>{if(e.KeyCode==Keys.Escape)dialog.DialogResult=DialogResult.Cancel;};
     if(dialog.ShowDialog(this)==DialogResult.OK)link.Text=full.Text.Trim();
    }
   }
+
   void ReloadHistory() {
-   history.BeginUpdate();history.Items.Clear();
-   foreach(var file in saved.History){var item=new ListViewItem(Path.GetFileName(file.Path));item.SubItems.Add((file.Size/1048576.0).ToString("0.00")+" MB");item.SubItems.Add(file.PersianDate());item.SubItems.Add(file.Duration());item.SubItems.Add(file.Average(saved.SpeedInBits));item.Tag=file;item.ToolTipText=file.Path+"\n"+file.PersianDate()+"\nمدت: "+file.Duration()+"\nسرعت متوسط: "+file.Average(saved.SpeedInBits);history.Items.Add(item);}
-   history.ShowItemToolTips=true;history.EndUpdate();
-   emptyHint.Visible=history.Items.Count==0;
-   count.Text=saved.History.Count.ToString();long bytes=0;foreach(var file in saved.History)bytes+=file.Size;total.Text=(bytes/1048576.0).ToString("0.0")+" MB";
+   RefreshTable();
+   count.AnimateTo(saved.History.Count);
+   long bytes=0;foreach(var file in saved.History)bytes+=file.Size;
+   total.AnimateTo(bytes/1048576.0);
   }
+
+  void RefreshTable(){
+   tableItems.Clear();
+   activeItem=BuildActiveItem();
+   if(activeItem!=null&&(filter=="all"||filter=="active"))tableItems.Add(activeItem);
+   if(filter=="all"||filter=="queued"){
+    int index=0;
+    foreach(string queued in saved.Queue){
+     string title="";try{title=DownloadEngine.FileName(queued);}catch{}
+     tableItems.Add(new DownloadItem{Title=title,Kind="queued",StatusText=Lang.T("row.queued"),SizeText="—",SpeedText="—",DateText="—",Order=long.MaxValue-1000-index,Tag=queued});
+     index++;
+    }
+   }
+   if(filter=="all"||filter=="completed"){
+    foreach(var file in saved.History){
+     tableItems.Add(new DownloadItem{
+      Title=Path.GetFileName(file.Path),
+      Kind="completed",
+      StatusText=file.DurationSeconds.HasValue?(Lang.T("row.duration")+"\u200E"+file.Duration()+"\u200E • \u200E"+file.Average(saved.SpeedInBits)+"\u200E"):Lang.T("row.completed"),
+      SizeText=CompletedFile.PersianDigits((file.Size/1048576.0).ToString("0.00",CultureInfo.InvariantCulture))+" MB",
+      SpeedText=file.Average(saved.SpeedInBits),
+      DateText=file.PersianDate(),
+      Order=file.Finished.Ticks,
+      Bytes=file.Size,
+      Tag=file});
+    }
+   }
+   if(searchTerm.Length>0){
+    var filtered=new List<DownloadItem>();
+    foreach(var item in tableItems)if(item.Title!=null&&item.Title.IndexOf(searchTerm,StringComparison.OrdinalIgnoreCase)>=0)filtered.Add(item);
+    tableItems=filtered;
+   }
+   history.EmptyMessage=tableItems.Count==0?Lang.T(searchTerm.Length>0?"table.noResults":filter=="all"?"table.empty":"table.emptyFilter"):"";
+   history.SetItems(tableItems);
+   history.ApplySort();
+   history.Invalidate();
+   UpdateQueueBadge();
+  }
+
+  DownloadItem BuildActiveItem(){
+   if(engine.State==null&&!engine.Running&&String.IsNullOrEmpty(currentTarget))return null;
+   // A finished download already lives in the completed list, so it is not shown twice.
+   if(!engine.Running&&!String.IsNullOrEmpty(currentTarget)&&File.Exists(currentTarget))return null;
+   string name=String.IsNullOrEmpty(currentTarget)?Lang.T("action.add"):Path.GetFileName(currentTarget);
+   long received=System.Threading.Interlocked.Read(ref engine.Received);
+   long size=engine.State!=null?engine.State.Size:0;
+   double progress=size>0?Math.Min(1,received/(double)size):0;
+   var item=new DownloadItem{Title=name,Kind=engine.Running?"active":"paused",Order=long.MaxValue};
+   item.Progress=progress;item.Indeterminate=size<=0&&engine.Running;
+   item.Bytes=size;
+   item.SizeText=size>0?(size/1048576.0).ToString("0.0")+" MB":(received/1048576.0).ToString("0.0")+" MB";
+   item.SpeedText=engine.Running?(CompletedFile.PersianDigits((displayedRate*(saved.SpeedInBits?8:1)/1000000d).ToString("0.00"))+(saved.SpeedInBits?" Mb/s":" MB/s")):"—";
+   string done=(received/1048576.0).ToString("0.0")+" MB";
+   item.StatusText=size>0?(Lang.T("row.received")+done+" • "+(engine.Status??"")):(engine.Status??"");
+   item.DateText=engine.Running?Lang.T("row.now"):"—";
+   return item;
+  }
+
+  void ShowItemMenu(DownloadItem item){
+   if(item==null||item.Kind!="completed")return;
+   var target=(CompletedFile)item.Tag;
+   if(target==null)return;
+   selectedFile=target;
+   var menu=new ContextMenuStrip{Font=Brand.Font(11),RightToLeft=Lang.Rtl?RightToLeft.Yes:RightToLeft.No};
+   menu.Items.Add(Lang.T("menu.open"),null,(s,e)=>OpenCompleted(false));
+   menu.Items.Add(Lang.T("menu.reveal"),null,(s,e)=>OpenCompleted(true));
+   FdmTheme.ApplyMenu(menu,dark);menu.Closed+=(s,e)=>menu.Dispose();
+   menu.Show(Cursor.Position);
+  }
+  CompletedFile selectedFile;
+
+  void OpenItem(DownloadItem item){
+   if(item==null)return;
+   if(item.Kind=="completed"){
+    var file=(CompletedFile)item.Tag;
+    if(file!=null){selectedFile=file;OpenCompleted(false);}
+   }
+  }
+
   void OpenCompleted(bool reveal) {
-   if(history.SelectedItems.Count==0)return;
-   var file=(CompletedFile)history.SelectedItems[0].Tag;
-   try{if(!File.Exists(file.Path)){MessageBox.Show("فایل جابه‌جا یا حذف شده است:\n"+file.Path,Text);return;}if(reveal)Process.Start("explorer.exe","/select,\""+file.Path+"\"");else Process.Start(new ProcessStartInfo(file.Path){UseShellExecute=true});}catch(Exception ex){MessageBox.Show(ex.Message,Text);}
+   if(selectedFile==null)return;
+   var file=selectedFile;
+   try{if(!File.Exists(file.Path)){MessageBox.Show(Lang.T("table.missing")+file.Path,Text);return;}if(reveal)Process.Start("explorer.exe","/select,\""+file.Path+"\"");else Process.Start(new ProcessStartInfo(file.Path){UseShellExecute=true});}catch(Exception ex){MessageBox.Show(ex.Message,Text);}
   }
+
   bool ChooseFolder() {
-   using(var dlg=new FolderBrowserDialog {Description="پوشهٔ ذخیرهٔ همهٔ دانلودها را انتخاب کنید",SelectedPath=saved.Folder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads")}) {
+   using(var dlg=new FolderBrowserDialog {Description=Lang.T("folder.dialog"),SelectedPath=saved.Folder ?? Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads")}) {
     if(dlg.ShowDialog()!=DialogResult.OK)return false;
     try{saved.Folder=dlg.SelectedPath;saved.Save(settings);UpdateTarget();return true;}catch(Exception ex){MessageBox.Show(ex.Message,Text);return false;}
    }
   }
+  // Runs an action on the user interface thread and completes when it has been applied.
+  Task RunUi(Action action){
+   if(IsDisposed||!IsHandleCreated){action();return Task.FromResult(0);}
+   if(!InvokeRequired){action();return Task.FromResult(0);}
+   var completion=new TaskCompletionSource<int>();
+   try{BeginInvoke(new Action(delegate(){
+    try{action();completion.SetResult(0);}catch(Exception ex){completion.SetException(ex);}
+   }));}catch(Exception ex){completion.SetException(ex);}
+   return completion.Task;
+  }
   async Task Start(bool confirmed=false) {
    if(engine.Running) return;
    Uri uri; string url=link.Text.Trim();
-   if(!Uri.TryCreate(url,UriKind.Absolute,out uri) || (uri.Scheme!="http" && uri.Scheme!="https")) {MessageBox.Show("لینک مستقیم معتبر وارد کنید.",Text);return;}
+   if(!Uri.TryCreate(url,UriKind.Absolute,out uri) || (uri.Scheme!="http" && uri.Scheme!="https")) {MessageBox.Show(Lang.T("error.invalidUrl"),Text);return;}
    if(String.IsNullOrEmpty(saved.Folder) && !ChooseFolder()) return;
    UpdateTarget();
    if(!confirmed&&!ConfirmDownload(url,false))return;
+   Exception failure=null;
    try {
     string target=Path.GetFullPath(destination.Text);
-    if(File.Exists(target)) {MessageBox.Show("این فایل وجود دارد؛ نام تازه‌ای انتخاب کنید.",Text);return;}
+    if(File.Exists(target)) {MessageBox.Show(Lang.T("error.exists"),Text);return;}
     Directory.CreateDirectory(Path.GetDirectoryName(target));
-    currentUrl=url;currentTarget=target;currentConnections=(int)connections.Value;
+    currentUrl=url;currentTarget=target;currentConnections=connections.Value;
     saved.Url=url;saved.Target=target;saved.Connections=currentConnections;saved.Save(settings);
     previous=0;previousTime=DateTime.UtcNow;downloadSpeed.Reset();
-    link.Enabled=linkSummary.Enabled=paste.Enabled=connections.Enabled=browse.Enabled=start.Enabled=false;pause.Enabled=true;
+    SetRunning(true);
     await engine.Run(url,target,currentConnections);
-    if(engine.Error==null && File.Exists(target)){saved.Complete(target,engine.State);saved.Save(settings);ReloadHistory();}
-    if(!closing && engine.Error!=null) MessageBox.Show(engine.Error, "مشکل دانلود",MessageBoxButtons.OK,MessageBoxIcon.Warning);
-   } catch(Exception ex) {MessageBox.Show(ex.Message,Text);}
-   finally {link.Enabled=linkSummary.Enabled=paste.Enabled=connections.Enabled=browse.Enabled=start.Enabled=true;pause.Enabled=false;RefreshDownload();if(!closing&&File.Exists(currentTarget??"")&&saved.Queue.Count>0){string next=saved.Queue[0];saved.Queue.RemoveAt(0);SaveSettings();BeginInvoke(new Action(()=>ReceiveDownload(next,true)));}}
+    await RunUi(delegate{
+     if(engine.Error==null && File.Exists(target)){saved.Complete(target,engine.State);saved.Save(settings);ReloadHistory();ShowToast(Lang.T("toast.completed")+Path.GetFileName(target),false);}
+     if(!closing && engine.Error!=null) {MessageBox.Show(engine.Error, Lang.T("error.generic"),MessageBoxButtons.OK,MessageBoxIcon.Warning);ShowToast(Lang.T("toast.failed"),true);}
+    });
+   } catch(Exception ex) {failure=ex;}
+   await RunUi(delegate{
+    if(failure!=null)MessageBox.Show(failure.Message,Text);
+    SetRunning(false);RefreshDownload();
+    if(!closing&&failure==null&&engine.Error==null&&!engine.Paused)StartNextQueued();
+   });
   }
-  void SaveSettings(){saved.Url=link.Text;saved.Target=destination.Text;saved.Connections=(int)connections.Value;saved.Save(settings);}
-  void ConfigureSpeedToggle(Control control){control.Cursor=Cursors.Hand;control.Click+=(s,e)=>{saved.SpeedInBits=!saved.SpeedInBits;RenderSpeed();ReloadHistory();try{saved.Save(settings);}catch(Exception ex){MessageBox.Show(ex.Message,Text);}};foreach(Control child in control.Controls)ConfigureSpeedToggle(child);}
-  void RenderSpeed(){double value=displayedRate*(saved.SpeedInBits?8:1)/1000000d;speed.Text=(value>0?value.ToString("0.00"):"0")+(saved.SpeedInBits?" Mb/s":" MB/s");speed.AccessibleName=saved.SpeedInBits?"سرعت دانلود به مگابیت بر ثانیه":"سرعت دانلود به مگابایت بر ثانیه";hints.SetToolTip(speed,saved.SpeedInBits?"مگابیت بر ثانیه؛ کلیک برای نمایش مگابایت":"مگابایت بر ثانیه؛ کلیک برای نمایش مگابیت");}
+
+  void SetRunning(bool running){
+   link.Enabled=linkSummary.Enabled=paste.Enabled=connections.Enabled=addButton.Enabled=!running;
+   pause.Visible=running;pause.Enabled=running;
+   start.Visible=!running;if(running)pause.BringToFront();
+   start.Text=running?Lang.T("status.downloading"):Lang.T("action.start");
+   start.Enabled=!running;
+  }
+
+  void OpenBatch(){
+   using(var dialog=new BatchDialog(dark)){
+    if(dialog.ShowDialog(this)!=DialogResult.OK)return;
+    AddBatch(dialog.Links);
+   }
+  }
+  int AddBatch(string text){
+   var links=ParseLinks(text);
+   if(links.Count==0){MessageBox.Show(Lang.T("batch.empty"),Text);return 0;}
+   int added=0;bool full=false;
+   foreach(string url in links){
+    if(url==currentUrl||saved.Queue.Contains(url))continue;
+    if(saved.Queue.Count>=100){full=true;break;}
+    saved.Queue.Add(url);added++;
+   }
+   if(added==0){MessageBox.Show(Lang.T("batch.invalid"),Text);return 0;}
+   SaveSettings();RefreshTable();
+   ShowToast(Lang.T("batch.added").Replace("{0}",CompletedFile.PersianDigits(added.ToString())),false);
+   if(full)ShowToast(Lang.T("batch.limit"),true);
+   if(!engine.Running)StartNextQueued();
+   return added;
+  }
+  void StartNextQueued(){
+   if(engine.Running||closing)return;
+   if(saved.Queue.Count==0){UpdateQueueBadge();return;}
+   string next=saved.Queue[0];saved.Queue.RemoveAt(0);SaveSettings();RefreshTable();
+   ReceiveDownload(next,true);
+  }
+  void UpdateQueueBadge(){
+   if(navItems.Count>3)navItems[3].Badge=saved.Queue.Count;
+  }
+  List<string> ParseLinks(string text){
+   var list=new List<string>();
+   if(String.IsNullOrEmpty(text))return list;
+   foreach(string line in text.Split(new[]{'\r','\n'},StringSplitOptions.RemoveEmptyEntries)){
+    string trimmed=line.Trim();
+    if(trimmed.Length==0)continue;
+    if(trimmed.IndexOf(' ')>=0||trimmed.IndexOf('\t')>=0){
+     foreach(string part in trimmed.Split(new[]{' ','\t'},StringSplitOptions.RemoveEmptyEntries))AddLink(list,part);
+    }else AddLink(list,trimmed);
+   }
+   return list;
+  }
+  void AddLink(List<string> list,string value){
+   string url=value.Trim();
+   Uri uri;
+   if(!Uri.TryCreate(url,UriKind.Absolute,out uri))return;
+   if(uri.Scheme!="http"&&uri.Scheme!="https")return;
+   if(!list.Contains(url))list.Add(url);
+  }
+  void SaveSettings(){saved.Url=link.Text;saved.Target=destination.Text;saved.Connections=connections.Value;saved.Save(settings);}
+  void RenderSpeed(){double value=displayedRate*(saved.SpeedInBits?8:1)/1000000d;speed.SetValue(value);speed.Suffix=saved.SpeedInBits?" Mb/s":" MB/s";speed.AccessibleName=saved.SpeedInBits?Lang.T("speed.bits"):Lang.T("speed.bytes");hints.SetToolTip(speed,saved.SpeedInBits?Lang.T("speed.bitsTip"):Lang.T("speed.bytesTip"));RefreshStatusStrip();}
+
   internal bool ReceiveDownload(string url,bool confirmed=false){
    LastDownloadDeclined=false;
    if(!Integration.ValidUrl(url)||closing)return false;
    if(WindowState==FormWindowState.Minimized)WindowState=FormWindowState.Normal;Show();Activate();
    if(!confirmed&&!ConfirmDownload(url,engine.Running)){LastDownloadDeclined=true;return false;}
-   if(engine.Running){if(saved.Queue.Count>=100)return false;if(!saved.Queue.Contains(url)&&url!=currentUrl){saved.Queue.Add(url);SaveSettings();}status.Text="در صف دانلود: "+saved.Queue.Count;return true;}
+   if(engine.Running){if(saved.Queue.Count>=100)return false;if(!saved.Queue.Contains(url)&&url!=currentUrl){saved.Queue.Add(url);SaveSettings();RefreshTable();}ShowToast(Lang.T("toast.queued"),false);return true;}
    if(String.IsNullOrEmpty(saved.Folder)){saved.Folder=Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),"Downloads");}
    link.Text=url;SaveSettings();BeginInvoke(new Action(async()=>await Start(true)));return true;
   }
   bool ConfirmDownload(string url,bool queued){using(var dialog=new DownloadPrompt(url,DownloadEngine.FileName(url),queued,dark))return dialog.ShowDialog(this)==DialogResult.Yes;}
-  void IntegrationSettings(){using(var dialog=new GlassForm{Text="ویندوز و مرورگر",ClientSize=new Size(590,390),StartPosition=FormStartPosition.CenterParent,Font=Brand.Font(12),RightToLeft=RightToLeft.Yes}){
-   var layout=new SmoothTableLayout{Dock=DockStyle.Fill,Padding=new Padding(24),RowCount=4};foreach(int height in new[]{48,130,55,55})layout.RowStyles.Add(new RowStyle(SizeType.Absolute,height));
-   var startup=new CheckBox{Text="اجرای آسان دانلود با روشن‌شدن کامپیوتر",Checked=Integration.StartupEnabled,Dock=DockStyle.Fill};startup.CheckedChanged+=(s,e)=>{try{Integration.StartupEnabled=startup.Checked;}catch(Exception ex){MessageBox.Show(ex.Message,Text);}};layout.Controls.Add(startup,0,0);
-   layout.Controls.Add(Label("برای دریافت دانلودهای کروم یا اج:\n۱. صفحهٔ افزونه‌ها را باز کنید و Developer mode را روشن کنید.\n۲. Load unpacked را بزنید و پوشهٔ افزونهٔ آسان دانلود را انتخاب کنید.\nدانلودهای نیازمند ورود به سایت، در مرورگر ادامه می‌یابند."),0,1);
-   var folderButton=Button("پوشهٔ افزونه");folderButton.Width=200;folderButton.Click+=(s,e)=>Process.Start("explorer.exe","\""+Path.Combine(Path.GetDirectoryName(ReleaseInfo.InstalledPath),"BrowserExtension")+"\"");layout.Controls.Add(folderButton,0,2);
-   var close=Button("بستن");close.DialogResult=DialogResult.OK;layout.Controls.Add(close,0,3);dialog.Controls.Add(layout);dialog.ShowDialog(this);
+
+  void ShowToast(string message,bool danger){
+   var toast=new Toast{Text=message,Danger=danger,Dark=dark,Width=340};
+   toast.Show(message,danger);
+   Controls.Add(toast);toast.BringToFront();
+   toast.Location=new Point(Math.Max(10,(ClientSize.Width-340)/2),ClientSize.Height-150);
+   toast.Anchor=AnchorStyles.Bottom;
+  }
+
+  void IntegrationSettings(){using(var dialog=new GlassForm{Text=Lang.T("integration.title"),ClientSize=new Size(600,420),MinimumSize=new Size(600,420),StartPosition=FormStartPosition.CenterParent,Font=Brand.Font(11),RightToLeft=Lang.Rtl?RightToLeft.Yes:RightToLeft.No}){
+   var layout=new SmoothTableLayout{Dock=DockStyle.Fill,Padding=new Padding(24),RowCount=4};foreach(int height in new[]{48,140,55,55})layout.RowStyles.Add(new RowStyle(SizeType.Absolute,height));
+   var startup=new CheckBox{Text=Lang.T("integration.startup"),Checked=Integration.StartupEnabled,Dock=DockStyle.Fill};startup.CheckedChanged+=(s,e)=>{try{Integration.StartupEnabled=startup.Checked;}catch(Exception ex){MessageBox.Show(ex.Message,Text);}};layout.Controls.Add(startup,0,0);
+   layout.Controls.Add(Label(Lang.T("integration.help")),0,1);
+   var folderButton=Button(Lang.T("action.extensionFolder"),0);folderButton.Width=200;folderButton.Dock=DockStyle.Right;folderButton.Click+=(s,e)=>Process.Start("explorer.exe","\""+Path.Combine(Path.GetDirectoryName(ReleaseInfo.InstalledPath),"BrowserExtension")+"\"");layout.Controls.Add(folderButton,0,2);
+   var close=Button(Lang.T("action.close"),0);close.DialogResult=DialogResult.OK;close.Dock=DockStyle.Right;layout.Controls.Add(close,0,3);dialog.Controls.Add(layout);FdmTheme.Apply(dialog,dialog,dark);dialog.ShowDialog(this);
   }}
+
   void RefreshDownload() {
-   if(engine.State==null) {if(engine.Running)status.Text=engine.Status;displayedRate=0;RenderSpeed();return;}
+   if(engine.State==null) {if(engine.Running)status.Text=engine.Status;displayedRate=0;RenderSpeed();UpdateActiveRow();return;}
    long received=System.Threading.Interlocked.Read(ref engine.Received);
    double rate=downloadSpeed.Measure(System.Threading.Interlocked.Read(ref engine.SessionReceived));
    displayedRate=engine.Running?rate:0;RenderSpeed();
    previous=received;previousTime=DateTime.UtcNow;
    long size=engine.State.Size;
-   progress.Style=size>0 ? ProgressBarStyle.Continuous : (engine.Running ? ProgressBarStyle.Marquee : ProgressBarStyle.Continuous);
-   if(size>0) progress.Value=(int)Math.Min(1000,received*1000.0/size);
-   progress.Invalidate();
+   progress.SetValue(size>0?(int)Math.Min(1000,received*1000.0/size):0);
+   progress.SetIndeterminate(size<=0&&engine.Running);
    status.Text=engine.Status;
-   detail.Text=(received/1048576.0).ToString("0.0")+" MB"+(size>0 ? " / "+(size/1048576.0).ToString("0.0")+" MB" : "")+(engine.Running?" • "+engine.ActiveConnections+" اتصال فعال":"")+(engine.Running && size>0 && rate>0 ? "   •   حدود "+TimeSpan.FromSeconds(Math.Min(8640000,Math.Max(0,size-received)/rate)).ToString(@"hh\:mm\:ss")+" باقی‌مانده" : "");
-   if(!engine.Running) start.Text=File.Exists(currentTarget ?? "") ? "دانلود تازه" : "شروع / ادامه";
+   RefreshStatusStrip();
+   UpdateActiveRow();
+  }
+
+  void UpdateActiveRow(){
+   DownloadItem item=BuildActiveItem();
+   int index=-1;
+   for(int n=0;n<tableItems.Count;n++)if(tableItems[n].Kind=="active"||tableItems[n].Kind=="paused"){index=n;break;}
+   if(item==null){
+    if(index>=0){tableItems.RemoveAt(index);history.SetItems(tableItems);history.ApplySort();}
+    return;
+   }
+   if(searchTerm.Length>0&&item.Title.IndexOf(searchTerm,StringComparison.OrdinalIgnoreCase)<0){if(index>=0){tableItems.RemoveAt(index);history.SetItems(tableItems);}return;}
+   if(index>=0){tableItems[index]=item;history.RefreshRows();return;}
+   if(filter!="all"&&filter!="active")return;
+   tableItems.Add(item);history.SetItems(tableItems);history.ApplySort();
+  }
+
+  void RefreshStatusStrip(){
+   statusStrip.SpeedText=CompletedFile.PersianDigits((displayedRate*(saved.SpeedInBits?8:1)/1000000d).ToString("0.00",CultureInfo.InvariantCulture))+(saved.SpeedInBits?" Mb/s":" MB/s");
+   statusStrip.BadgeText=CompletedFile.PersianDigits(engine.ActiveConnections.ToString())+" "+Lang.T("status.connections");
+   statusStrip.Hint=engine.Running?engine.Status:(String.IsNullOrEmpty(saved.Folder)?Lang.T("folder.incomplete"):saved.Folder??"");statusStrip.Invalidate();
+  }
+
+  class ColumnAnimator : IAnim {
+   TableLayoutPanel host;int column;double from,to,elapsed,duration;
+   public ColumnAnimator(TableLayoutPanel host,int column,int from,int to,double duration){this.host=host;this.column=column;this.from=from;this.to=to;this.duration=duration;}
+   public void Step(double dt){
+    elapsed+=dt;double p=Math.Min(1,duration<=0?1:elapsed/duration);double e=Ease.InOutCubic(p);
+    host.ColumnStyles[column].Width=(int)Math.Round(from+(to-from)*e);
+    host.PerformLayout();
+   }
+   public bool Finished {
+    get { if(elapsed<duration)return false; host.ColumnStyles[column].Width=(int)to; host.PerformLayout(); return true; }
+   }
   }
  }
+
  static class Program {
   [STAThread] static void Main(string[] args) {
    ServicePointManager.DefaultConnectionLimit=32;
@@ -262,7 +828,14 @@ namespace MehrDownload {
    try {
     if(args.Length>0 && args[0]=="--install") {Install();return;}
     if(args.Length>1 && args[0]=="--screenshot") {
-     using(var form=new Window(false)) {form.Show();Application.DoEvents();using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(0,0,form.Width,form.Height));image.Save(args[1]);}form.Close();}return;
+     if(args.Length>2&&args[2]=="en")Lang.English=true;
+     using(var form=new Window(false)) {
+      if(args.Length>2&&args[2]=="dark"){
+       typeof(Window).GetField("dark",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).SetValue(form,true);
+       typeof(Window).GetMethod("PaintTheme",System.Reflection.BindingFlags.Instance|System.Reflection.BindingFlags.NonPublic).Invoke(form,new object[]{form});
+      }
+      form.Show();DateTime until=DateTime.UtcNow.AddMilliseconds(1800);while(DateTime.UtcNow<until){Application.DoEvents();System.Threading.Thread.Sleep(16);}
+      using(var image=new Bitmap(form.Width,form.Height)){form.DrawToBitmap(image,new Rectangle(0,0,form.Width,form.Height));image.Save(args[1]);}form.Close();}return;
     }
     if(args.Length>0 && args[0]=="--apply-update"){UpdateClient.Apply(args);return;}
     using(var instance=new System.Threading.Mutex(false,"Local\\AsanDownload.Desktop.v1")){
@@ -275,7 +848,7 @@ namespace MehrDownload {
    } catch(Exception ex) {
     if(args.Length>0&&args[0]=="--apply-update"){try{if(File.Exists(ReleaseInfo.InstalledPath))Process.Start(new ProcessStartInfo(ReleaseInfo.InstalledPath,"--skip-update"){UseShellExecute=true});}catch{}Environment.ExitCode=1;return;}
     if(Environment.GetEnvironmentVariable("MEHR_INSTALL_SILENT")=="1")File.WriteAllText(Path.Combine(Path.GetDirectoryName(Application.ExecutablePath),"InstallError.txt"),ex.ToString());
-    else MessageBox.Show(ex.Message,"دانلود");Environment.ExitCode=1;
+    else MessageBox.Show(ex.Message,Lang.T("app.name"));Environment.ExitCode=1;
    }
   }
   internal static void Install(bool copy=true) {
@@ -289,14 +862,14 @@ namespace MehrDownload {
    foreach(string path in new[]{Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory),Environment.GetFolderPath(Environment.SpecialFolder.Programs)}) {
     string old=Path.Combine(path,"Mehr Download.lnk");if(File.Exists(old))File.Delete(old);
     string previous=Path.Combine(path,"دانلود.lnk");if(File.Exists(previous))File.Delete(previous);
-    string temporary=Path.Combine(path,"Download.lnk"),final=Path.Combine(path,"آسان دانلود.lnk");
+    string temporary=Path.Combine(path,"Download.lnk"),final=Path.Combine(path,Lang.English?"Asan Download.lnk":"آسان دانلود.lnk");
     dynamic shortcut=shell.CreateShortcut(temporary);shortcut.TargetPath=exe;shortcut.IconLocation=exe+",0";shortcut.WorkingDirectory=dir;shortcut.Description="Asan Download";shortcut.Save();
     if(File.Exists(final))File.Delete(final);File.Move(temporary,final);
    }
    string uninstall=Path.Combine(dir,"Uninstall.ps1");
    File.WriteAllText(uninstall,"$ErrorActionPreference = 'Stop'\r\nStop-Process -Name MehrDownload -ErrorAction SilentlyContinue\r\n$target = Join-Path $env:LOCALAPPDATA 'Programs\\MehrDownload'\r\nif ([IO.Path]::GetFullPath($target) -ne [IO.Path]::GetFullPath((Join-Path $env:LOCALAPPDATA 'Programs\\MehrDownload'))) { throw 'Invalid path' }\r\nRemove-Item -LiteralPath (Join-Path ([Environment]::GetFolderPath('DesktopDirectory')) 'آسان دانلود.lnk') -ErrorAction SilentlyContinue\r\nRemove-Item -LiteralPath (Join-Path ([Environment]::GetFolderPath('Programs')) 'آسان دانلود.lnk') -ErrorAction SilentlyContinue\r\nRemove-Item -LiteralPath 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\MehrDownload' -ErrorAction SilentlyContinue\r\nRemove-Item -LiteralPath $target -Recurse -Force\r\n",System.Text.Encoding.UTF8);
    using(var key=Registry.CurrentUser.CreateSubKey(@"Software\Microsoft\Windows\CurrentVersion\Uninstall\MehrDownload")) {
-    key.SetValue("DisplayName","آسان دانلود");key.SetValue("DisplayVersion",ReleaseInfo.Version);key.SetValue("Publisher","MehrNoor");key.SetValue("InstallLocation",dir);key.SetValue("DisplayIcon",exe);
+    key.SetValue("DisplayName",Lang.English?"Asan Download":"آسان دانلود");key.SetValue("DisplayVersion",ReleaseInfo.Version);key.SetValue("Publisher","MehrNoor");key.SetValue("InstallLocation",dir);key.SetValue("DisplayIcon",exe);
     key.SetValue("UninstallString","powershell.exe -NoProfile -ExecutionPolicy Bypass -File \""+uninstall+"\"");key.SetValue("NoModify",1);key.SetValue("NoRepair",1);
    }
    if(copy&&Environment.GetEnvironmentVariable("MEHR_INSTALL_SILENT")!="1") Process.Start(exe);

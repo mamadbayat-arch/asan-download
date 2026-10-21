@@ -9,11 +9,16 @@ Persian Windows download manager with a browser extension and a small self-hoste
 ## Features
 
 - Up to 16 download connections, adaptive chunk scheduling, retries, pause and resume.
+- Batch processing: paste many links at once, they are queued, shown in the download table and fetched one after another while the current file keeps downloading.
+- Pausing or failing the current download keeps later links queued and preserves the current URL and destination for retry.
 - One default download folder, automatic filenames and collision-safe destinations.
 - Persistent completed-download history with independent records, atomic writes and recovery backups.
 - Persian completion dates, active download duration and average speed; clickable MB/s ↔ Mb/s display.
 - Confirmation before browser downloads; automatic interception requires a recent real click or keyboard action. Browser-startup downloads do not generate unsolicited prompts.
-- Light/dark interface, embedded Kalameh fonts and Hamtavar branding.
+- Free Download Manager inspired interface: dark navy title bar, filterable sidebar, FDM styled download table with per-row progress, speed and remaining time, drop zone, status bar and a sponsored strip that stays pinned to the bottom of the window.
+- Motion everywhere: one shared 60 fps ticker drives the window reveal, staggered sidebar entrance, hover lift and glow on buttons, animated progress bars, count-up statistics, sliding download rows, cross-faded theme switch and rising toasts.
+- Bilingual interface: Persian and English can be switched at any time from the side bar. The reading direction, the table columns, the tool bars, the window buttons, the digits and the calendar dates all follow the selected language, and Persian runs with a slightly smaller type size.
+- White and green interface, light and dark variants, embedded Kalameh fonts and Hamtavar branding.
 - Windows startup option, browser native messaging, signed automatic updates, centrally managed advertisements and issue reporting.
 
 ## Build and run
@@ -41,6 +46,19 @@ node server/test.mjs
 ```
 
 These cover download integrity, pause/resume, history persistence and recovery, Persian dates, UI behavior, signed-update validation and rollback, browser consent/fallback and unwanted startup requests.
+
+Source-only checkouts run all update protocol and rollback tests. The final check of the actual publisher-signed release package runs when generated release artifacts are present; an incomplete or invalid artifact pair fails validation.
+
+`UIQualityTests.cs`, included in `Test.ps1`, also exercises language/theme/sidebar persistence, keyboard controls, confirmation and batch dialogs, rapid toggles, table sorting and virtualization, and animation cleanup. It captures Persian/English and light/dark previews at 1280×940, 1060×760 and 960×640 under `qa-artifacts/after/`. These checks run against isolated settings and do not touch the current user's download history.
+
+The main interface adapts its action bars to smaller windows and keeps the sidebar toggle visible while the navigation scrolls vertically. Completed files open with double click or Enter; right click and the row menu expose file actions. Theme and sidebar preferences persist alongside language.
+
+To build a separate executable while another copy is running:
+
+```powershell
+New-Item -ItemType Directory -Force qa-artifacts | Out-Null
+./Build.ps1 -OutputPath qa-artifacts/MehrDownload.exe
+```
 
 `AdaptiveTests.cs` and `AdaptiveServer.mjs` provide the controlled slow-connection scheduling benchmark. `NativeSmoke.mjs ping` checks the installed native host without starting a download.
 
@@ -70,7 +88,7 @@ Release files are generated in `server/public/downloads` and the manifest in `se
 
 | Path | Purpose |
 | --- | --- |
-| `App.cs`, `Glass.cs` | Windows interface and installer |
+| `App.cs`, `Glass.cs`, `FdmWidgets.cs`, `Lang.cs` | Windows interface, FDM design system, animation engine, Persian/English strings and installer |
 | `Engine.cs` | Download engine and resume state |
 | `HistoryStore.cs` | Durable completed-download records |
 | `Updates.cs` | Signed updates and rollback |
